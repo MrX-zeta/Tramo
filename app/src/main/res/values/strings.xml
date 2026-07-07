@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Tramo</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_get_started">Get started</string>
+
+    <string name="onboarding_title_1">Focus, one block at a time</string>
+    <string name="onboarding_subtitle_1">Work in 25-minute sprints designed to keep your attention sharp and your mind fresh.</string>
+
+    <string name="onboarding_title_2">Rest is part of the work</string>
+    <string name="onboarding_subtitle_2">Short breaks between sessions recharge you, so you finish the day energized, not drained.</string>
+
+    <string name="onboarding_title_3">Watch your progress grow</string>
+    <string name="onboarding_subtitle_3">Every completed block builds momentum. See your streaks and stay motivated over time.</string>
 </resources>
