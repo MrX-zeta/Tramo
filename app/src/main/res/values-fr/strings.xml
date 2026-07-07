@@ -20,6 +20,8 @@
     <string name="timer_stop">Arrêter</string>
     <string name="timer_sessions_today">%1$d sessions de concentration aujourd\'hui</string>
     <string name="timer_channel_name">Minuteur Pomodoro</string>
+    <string name="timer_alert_channel_name">Alertes du minuteur</string>
+    <string name="timer_completed_title">Session terminée</string>
     <string name="timer_open_tasks">Mes tâches</string>
     <string name="timer_open_report">Rapport</string>
     <string name="timer_open_settings">Paramètres</string>
@@ -55,6 +57,8 @@
     <string name="report_current_streak">Série actuelle</string>
     <string name="report_longest_streak">Record</string>
     <string name="report_activity_title">Activité</string>
+    <string name="report_daily_chart_title">Minutes de concentration par jour</string>
+    <string name="report_empty_state">Commencez votre première session de concentration</string>
 
     <!-- Tasks -->
     <string name="task_add">Ajouter une tâche</string>

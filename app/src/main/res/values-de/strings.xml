@@ -20,6 +20,8 @@
     <string name="timer_stop">Stopp</string>
     <string name="timer_sessions_today">%1$d Fokus-Sitzungen heute</string>
     <string name="timer_channel_name">Pomodoro-Timer</string>
+    <string name="timer_alert_channel_name">Timer-Benachrichtigungen</string>
+    <string name="timer_completed_title">Sitzung abgeschlossen</string>
     <string name="timer_open_tasks">Meine Aufgaben</string>
     <string name="timer_open_report">Bericht</string>
     <string name="timer_open_settings">Einstellungen</string>
@@ -55,6 +57,8 @@
     <string name="report_current_streak">Aktuelle Serie</string>
     <string name="report_longest_streak">Längste Serie</string>
     <string name="report_activity_title">Aktivität</string>
+    <string name="report_daily_chart_title">Fokusminuten pro Tag</string>
+    <string name="report_empty_state">Starte deine erste Fokus-Sitzung</string>
 
     <!-- Tasks -->
     <string name="task_add">Aufgabe hinzufügen</string>

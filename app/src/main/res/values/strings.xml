@@ -25,6 +25,8 @@
     <string name="timer_stop">Stop</string>
     <string name="timer_sessions_today">%1$d focus sessions today</string>
     <string name="timer_channel_name">Pomodoro Timer</string>
+    <string name="timer_alert_channel_name">Timer alerts</string>
+    <string name="timer_completed_title">Session complete</string>
     <string name="timer_open_tasks">My Tasks</string>
     <string name="timer_open_report">Report</string>
     <string name="timer_open_settings">Settings</string>
@@ -60,6 +62,8 @@
     <string name="report_current_streak">Current streak</string>
     <string name="report_longest_streak">Longest streak</string>
     <string name="report_activity_title">Activity</string>
+    <string name="report_daily_chart_title">Focus minutes per day</string>
+    <string name="report_empty_state">Start your first focus session</string>
 
     <!-- Tasks -->
     <string name="task_add">Add task</string>

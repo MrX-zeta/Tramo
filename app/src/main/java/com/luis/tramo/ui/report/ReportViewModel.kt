@@ -2,6 +2,7 @@ package com.luis.tramo.ui.report
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.luis.tramo.data.session.DailyFocus
 import com.luis.tramo.data.session.DayCount
 import com.luis.tramo.data.session.HourlyFocus
 import com.luis.tramo.data.session.SessionRepository
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.stateIn
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 
@@ -41,7 +43,9 @@ data class ReportUiState(
     val sessionCount: Int = 0,
     val avgSessionSeconds: Int = 0,
     /** 24 buckets (hour 0..23) of focus minutes for the selected range. */
-    val hourlyMinutes: List<Int> = List(24) { 0 }
+    val hourlyMinutes: List<Int> = List(24) { 0 },
+    /** One focus-minutes value per day across the selected range (oldest → today). */
+    val dailyMinutes: List<Int> = emptyList()
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -56,24 +60,36 @@ class ReportViewModel @Inject constructor(
     private val _range = MutableStateFlow(ReportRange.WEEKLY)
     val range: StateFlow<ReportRange> = _range.asStateFlow()
 
-    private val hourlyFlow = _range.flatMapLatest { range ->
-        repository.focusIntensityByHour(startOfDay(range.days - 1))
+    // Range-dependent chart data (hourly intensity + per-day minutes) folded into one flow so the
+    // top-level combine stays within arity limits.
+    private data class RangeData(
+        val range: ReportRange,
+        val hourly: List<HourlyFocus>,
+        val daily: List<DailyFocus>
+    )
+
+    private val rangeData = _range.flatMapLatest { range ->
+        val start = startOfDay(range.days - 1)
+        combine(
+            repository.focusIntensityByHour(start),
+            repository.focusMinutesByDay(start)
+        ) { hourly, daily -> RangeData(range, hourly, daily) }
     }
 
     val uiState: StateFlow<ReportUiState> = combine(
-        _range,
+        rangeData,
         repository.focusSecondsSince(todayStart),
         repository.breakSecondsSince(todayStart),
-        repository.focusCountSince(todayStart),
-        hourlyFlow
-    ) { range, focus, breaks, count, hourly ->
+        repository.focusCountSince(todayStart)
+    ) { data, focus, breaks, count ->
         ReportUiState(
-            range = range,
+            range = data.range,
             focusSeconds = focus,
             breakSeconds = breaks,
             sessionCount = count,
             avgSessionSeconds = if (count > 0) focus / count else 0,
-            hourlyMinutes = toHourlyMinutes(hourly)
+            hourlyMinutes = toHourlyMinutes(data.hourly),
+            dailyMinutes = toDailyMinutes(data.daily, data.range.days.toInt())
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportUiState())
 
@@ -149,6 +165,18 @@ class ReportViewModel @Inject constructor(
         val buckets = IntArray(24)
         rows.forEach { row ->
             if (row.hour in 0..23) buckets[row.hour] = row.totalSeconds / 60
+        }
+        return buckets.toList()
+    }
+
+    /** Builds one focus-minutes value per day, oldest → today, for a [days]-long window. */
+    private fun toDailyMinutes(rows: List<DailyFocus>, days: Int): List<Int> {
+        val today = LocalDate.now()
+        val buckets = IntArray(days)
+        rows.forEach { row ->
+            val date = runCatching { LocalDate.parse(row.day) }.getOrNull() ?: return@forEach
+            val daysAgo = ChronoUnit.DAYS.between(date, today).toInt()
+            if (daysAgo in 0 until days) buckets[days - 1 - daysAgo] = row.totalSeconds / 60
         }
         return buckets.toList()
     }

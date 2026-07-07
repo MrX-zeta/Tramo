@@ -20,6 +20,8 @@
     <string name="timer_stop">Parar</string>
     <string name="timer_sessions_today">%1$d sessões de foco hoje</string>
     <string name="timer_channel_name">Temporizador Pomodoro</string>
+    <string name="timer_alert_channel_name">Alertas do temporizador</string>
+    <string name="timer_completed_title">Sessão concluída</string>
     <string name="timer_open_tasks">Minhas tarefas</string>
     <string name="timer_open_report">Relatório</string>
     <string name="timer_open_settings">Configurações</string>
@@ -55,6 +57,8 @@
     <string name="report_current_streak">Sequência atual</string>
     <string name="report_longest_streak">Recorde</string>
     <string name="report_activity_title">Atividade</string>
+    <string name="report_daily_chart_title">Minutos de foco por dia</string>
+    <string name="report_empty_state">Comece sua primeira sessão de foco</string>
 
     <!-- Tasks -->
     <string name="task_add">Adicionar tarefa</string>

@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -92,8 +93,16 @@ fun ReportScreen(
                 )
             }
 
-            // 12-week activity heatmap.
-            ActivityHeatmap(cells = heat.cells)
+            // 12-week activity heatmap (with empty state).
+            if (heat.totalCompletions == 0) {
+                Text(
+                    text = stringResource(R.string.report_activity_title),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                ChartEmptyState()
+            } else {
+                ActivityHeatmap(cells = heat.cells)
+            }
 
             // Today's totals.
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -135,15 +144,57 @@ fun ReportScreen(
                 }
             }
 
+            // Per-day focus-minutes bar chart (Semanal / Mensual).
+            Text(
+                text = stringResource(R.string.report_daily_chart_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            if (state.dailyMinutes.all { it == 0 }) {
+                ChartEmptyState()
+            } else {
+                BarChart(
+                    values = state.dailyMinutes,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                )
+            }
+
+            // Hourly focus-intensity chart.
             Text(
                 text = stringResource(R.string.report_chart_title),
                 style = MaterialTheme.typography.titleMedium
             )
-            FocusIntensityChart(
-                hourlyMinutes = state.hourlyMinutes,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
+            if (state.hourlyMinutes.all { it == 0 }) {
+                ChartEmptyState()
+            } else {
+                BarChart(
+                    values = state.hourlyMinutes,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChartEmptyState() {
+    ElevatedCard(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.report_empty_state),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -256,14 +307,14 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>) {
 private val ALPHA_BY_LEVEL = floatArrayOf(0f, 0.4f, 0.6f, 0.8f, 1f)
 
 @Composable
-private fun FocusIntensityChart(
-    hourlyMinutes: List<Int>,
+private fun BarChart(
+    values: List<Int>,
     modifier: Modifier = Modifier
 ) {
     val modelProducer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(hourlyMinutes) {
+    LaunchedEffect(values) {
         modelProducer.runTransaction {
-            columnModel { series(hourlyMinutes.ifEmpty { listOf(0) }) }
+            columnModel { series(values.ifEmpty { listOf(0) }) }
         }
     }
     CartesianChartHost(

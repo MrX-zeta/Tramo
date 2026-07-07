@@ -20,6 +20,8 @@
     <string name="timer_stop">Detener</string>
     <string name="timer_sessions_today">%1$d sesiones de concentración hoy</string>
     <string name="timer_channel_name">Temporizador Pomodoro</string>
+    <string name="timer_alert_channel_name">Alertas del temporizador</string>
+    <string name="timer_completed_title">Sesión completada</string>
     <string name="timer_open_tasks">Mis tareas</string>
     <string name="timer_open_report">Informe</string>
     <string name="timer_open_settings">Ajustes</string>
@@ -55,6 +57,8 @@
     <string name="report_current_streak">Racha actual</string>
     <string name="report_longest_streak">Racha máxima</string>
     <string name="report_activity_title">Actividad</string>
+    <string name="report_daily_chart_title">Minutos de concentración por día</string>
+    <string name="report_empty_state">Empieza tu primera sesión de concentración</string>
 
     <!-- Tasks -->
     <string name="task_add">Añadir tarea</string>
