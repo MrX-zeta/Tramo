@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luis.tramo.data.session.DailyFocus
 import com.luis.tramo.data.session.DayCount
+import com.luis.tramo.data.session.MonthCount
 import com.luis.tramo.data.session.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
@@ -37,12 +40,27 @@ data class HeatmapUiState(
     val activeDays: Int = 0
 )
 
+/** Today's focus summary (card 1). */
+data class TodayUiState(
+    val focusSeconds: Int = 0,
+    val breakSeconds: Int = 0
+)
+
+/** The Semanal/Mensual overview: range stats + per-day chart (card 2). */
 data class ReportUiState(
     val range: ReportRange = ReportRange.WEEKLY,
-    /** One focus-minutes value per day across the selected range (oldest → today). */
+    val rangeFocusSeconds: Int = 0,
+    val rangeSessionCount: Int = 0,
     val dailyMinutes: List<Int> = emptyList(),
-    /** Non-blank x-axis labels for [dailyMinutes]: weekday narrows (weekly) or day-of-month (monthly). */
     val dailyLabels: List<String> = emptyList()
+) {
+    val avgSessionSeconds: Int get() = if (rangeSessionCount > 0) rangeFocusSeconds / rangeSessionCount else 0
+}
+
+/** Monthly sessions-per-month chart (card 5). */
+data class MonthlyUiState(
+    val counts: List<Int> = emptyList(),
+    val labels: List<String> = emptyList()
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -52,15 +70,29 @@ class ReportViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val zone: ZoneId = ZoneId.systemDefault()
+    private val todayStart: Long = startOfDay(0)
 
     private val _range = MutableStateFlow(ReportRange.WEEKLY)
     val range: StateFlow<ReportRange> = _range.asStateFlow()
 
+    val todayState: StateFlow<TodayUiState> = combine(
+        repository.focusSecondsSince(todayStart),
+        repository.breakSecondsSince(todayStart)
+    ) { focus, breaks -> TodayUiState(focus, breaks) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUiState())
+
     val uiState: StateFlow<ReportUiState> = _range.flatMapLatest { range ->
-        repository.focusMinutesByDay(startOfDay(range.days - 1)).map { daily ->
+        val start = startOfDay(range.days - 1)
+        combine(
+            repository.focusMinutesByDay(start),
+            repository.focusSecondsSince(start),
+            repository.focusCountSince(start)
+        ) { daily, focusSeconds, count ->
             val days = range.days.toInt()
             ReportUiState(
                 range = range,
+                rangeFocusSeconds = focusSeconds,
+                rangeSessionCount = count,
                 dailyMinutes = toDailyMinutes(daily, days),
                 dailyLabels = buildDailyLabels(days)
             )
@@ -71,39 +103,52 @@ class ReportViewModel @Inject constructor(
     private val heatmapStartMonday: LocalDate =
         LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(11)
 
-    /** Heatmap cells + summary KPIs. The cell/level computation runs off the main thread. */
     val heatmapState: StateFlow<HeatmapUiState> = combine(
         repository.focusCountsByDay(heatmapStartMonday.atStartOfDay(zone).toInstant().toEpochMilli()),
         repository.totalFocusCount(),
         repository.focusDayStamps()
     ) { dayCounts, total, stamps ->
-        HeatmapUiState(
-            cells = buildCells(dayCounts),
-            totalCompletions = total,
-            activeDays = stamps.size
-        )
+        HeatmapUiState(cells = buildCells(dayCounts), totalCompletions = total, activeDays = stamps.size)
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HeatmapUiState())
+
+    private val monthsWindowStart: Long =
+        LocalDate.now().withDayOfMonth(1).minusMonths(11).atStartOfDay(zone).toInstant().toEpochMilli()
+
+    val monthlyState: StateFlow<MonthlyUiState> =
+        repository.focusCountsByMonth(monthsWindowStart)
+            .map { rows -> buildMonthly(rows) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MonthlyUiState())
 
     fun selectRange(range: ReportRange) {
         _range.value = range
     }
 
-    /**
-     * Bucket-count-aware x-axis labels — always non-blank (Vico rejects blank formatter output).
-     * Weekly → localized weekday narrows; monthly → day-of-month numbers (the axis thins them).
-     */
+    /** Bucket-count-aware x-axis labels — always non-blank (Vico rejects blank formatter output). */
     private fun buildDailyLabels(days: Int): List<String> {
         val today = LocalDate.now()
         val locale = Locale.getDefault()
         return (0 until days).map { i ->
             val date = today.minusDays((days - 1 - i).toLong())
-            if (days <= 7) {
-                date.dayOfWeek.getDisplayName(TextStyle.NARROW, locale)
-            } else {
-                date.dayOfMonth.toString()
-            }
+            if (days <= 7) date.dayOfWeek.getDisplayName(TextStyle.NARROW, locale) else date.dayOfMonth.toString()
         }
+    }
+
+    /** Last 12 months (oldest → this month) of focus-session counts + short month labels. */
+    private fun buildMonthly(rows: List<MonthCount>): MonthlyUiState {
+        val countByMonth = rows.associate { it.month to it.count }
+        val keyFormat = DateTimeFormatter.ofPattern("yyyy-MM")
+        val locale = Locale.getDefault()
+        val thisMonth = YearMonth.now()
+        val counts = ArrayList<Int>(12)
+        val labels = ArrayList<String>(12)
+        for (i in 11 downTo 0) {
+            val ym = thisMonth.minusMonths(i.toLong())
+            counts.add(countByMonth[ym.format(keyFormat)] ?: 0)
+            labels.add(ym.month.getDisplayName(TextStyle.SHORT, locale))
+        }
+        return MonthlyUiState(counts, labels)
     }
 
     /** Builds the 84 cells ordered weekday-major so a 12-column grid renders 7 rows × 12 weeks. */
@@ -122,6 +167,21 @@ class ReportViewModel @Inject constructor(
         return cells
     }
 
+    /** Month label for each of the 12 heatmap week-columns (shown where the month changes). */
+    fun heatmapColumnLabels(): List<String> {
+        val locale = Locale.getDefault()
+        var lastMonth = -1
+        return (0 until WEEKS).map { week ->
+            val monthValue = heatmapStartMonday.plusWeeks(week.toLong()).monthValue
+            if (monthValue != lastMonth) {
+                lastMonth = monthValue
+                heatmapStartMonday.plusWeeks(week.toLong()).month.getDisplayName(TextStyle.NARROW, locale)
+            } else {
+                ""
+            }
+        }
+    }
+
     private fun levelFor(count: Int): Int = when {
         count <= 0 -> 0
         count == 1 -> 1
@@ -130,11 +190,9 @@ class ReportViewModel @Inject constructor(
         else -> 4
     }
 
-    /** Epoch millis for the start of the day [daysAgo] days before today (local time). */
     private fun startOfDay(daysAgo: Long): Long =
         LocalDate.now().minusDays(daysAgo).atStartOfDay(zone).toInstant().toEpochMilli()
 
-    /** Builds one focus-minutes value per day, oldest → today, for a [days]-long window. */
     private fun toDailyMinutes(rows: List<DailyFocus>, days: Int): List<Int> {
         val today = LocalDate.now()
         val buckets = IntArray(days)
