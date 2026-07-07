@@ -102,10 +102,13 @@ class PomodoroTimerService : Service() {
      * start, never mid-session); breaks keep their fixed defaults.
      */
     private suspend fun freshSession(type: SessionType): TimerState {
-        if (type != SessionType.FOCUS) return TimerState.forSession(type)
-        val seconds = preferences.focusPresetMinutes.first() * 60
+        val seconds = when (type) {
+            SessionType.FOCUS -> preferences.focusPresetMinutes.first() * 60
+            SessionType.SHORT_BREAK -> preferences.breakPresetMinutes.first() * 60
+            SessionType.LONG_BREAK -> type.durationSeconds
+        }
         return TimerState(
-            sessionType = SessionType.FOCUS,
+            sessionType = type,
             status = TimerStatus.IDLE,
             remainingSeconds = seconds,
             totalSeconds = seconds
