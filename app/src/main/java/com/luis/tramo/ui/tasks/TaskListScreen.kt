@@ -104,10 +104,10 @@ fun TaskListScreen(
     }
 
     if (showAddDialog) {
-        AddTaskDialog(
+        AddTaskSheet(
             onDismiss = { showAddDialog = false },
-            onConfirm = { title, category, priority, tags, subtasks ->
-                viewModel.addTask(title, category, priority, tags, subtasks)
+            onConfirm = { input ->
+                viewModel.addTask(input)
                 showAddDialog = false
             }
         )
@@ -126,15 +126,21 @@ private fun TaskCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // Color-coded category border.
+            // Color-coded accent border (custom color, or category color).
             Box(
                 modifier = Modifier
                     .width(6.dp)
                     .fillMaxHeight()
-                    .background(Color(task.category.colorArgb))
+                    .background(Color(task.effectiveColorArgb))
             )
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (task.iconEmoji.isNotEmpty()) {
+                        Text(
+                            text = task.iconEmoji,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    }
                     Text(
                         text = task.title,
                         style = MaterialTheme.typography.titleMedium,

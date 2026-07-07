@@ -66,6 +66,13 @@
     <string name="task_tags_label">Tags (comma separated)</string>
     <string name="task_subtasks_label">Subtasks (comma separated)</string>
     <string name="task_subtask_progress">%1$d / %2$d subtasks</string>
+    <string name="task_icon_label">Icon</string>
+    <string name="task_color_label">Color</string>
+    <string name="task_recurring_label">Repeat</string>
+    <string name="template_meeting">Meeting</string>
+    <string name="template_email">Email</string>
+    <string name="template_coding">Coding</string>
+    <string name="template_design">Design</string>
 
     <string name="category_work">Work</string>
     <string name="category_study">Study</string>
