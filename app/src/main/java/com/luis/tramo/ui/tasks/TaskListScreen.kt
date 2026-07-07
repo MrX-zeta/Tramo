@@ -36,10 +36,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.luis.tramo.navigation.TramoLargeTopBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.luis.tramo.ui.components.ScreenEntrance
+import com.luis.tramo.ui.components.rememberReduceMotion
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -66,6 +69,9 @@ fun TaskListScreen(
     val showUpsell by viewModel.showProUpsell.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val reduceMotion = rememberReduceMotion()
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -78,34 +84,39 @@ fun TaskListScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            PrimaryTabRow(selectedTabIndex = filter.ordinal) {
-                TaskFilter.entries.forEach { entry ->
-                    Tab(
-                        selected = filter == entry,
-                        onClick = { viewModel.selectFilter(entry) },
-                        text = { Text(stringResource(entry.labelRes())) }
-                    )
+            ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
+                PrimaryTabRow(selectedTabIndex = filter.ordinal) {
+                    TaskFilter.entries.forEach { entry ->
+                        Tab(
+                            selected = filter == entry,
+                            onClick = { viewModel.selectFilter(entry) },
+                            text = { Text(stringResource(entry.labelRes())) }
+                        )
+                    }
                 }
             }
 
-            if (tasks.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = stringResource(R.string.task_empty),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskCard(
-                            task = task,
-                            onToggleCompleted = { viewModel.toggleTaskCompleted(task) },
-                            onToggleSubtask = { index -> viewModel.toggleSubtask(task, index) }
+            ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion, modifier = Modifier.weight(1f)) {
+                if (tasks.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = stringResource(R.string.task_empty),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(tasks, key = { it.id }) { task ->
+                            TaskCard(
+                                task = task,
+                                onToggleCompleted = { viewModel.toggleTaskCompleted(task) },
+                                onToggleSubtask = { index -> viewModel.toggleSubtask(task, index) }
+                            )
+                        }
                     }
                 }
             }

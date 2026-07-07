@@ -47,10 +47,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.luis.tramo.ui.components.ScreenEntrance
+import com.luis.tramo.ui.components.rememberReduceMotion
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -75,6 +78,9 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showLanguageDialog by remember { mutableStateOf(false) }
+    val reduceMotion = rememberReduceMotion()
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
 
     Scaffold { innerPadding ->
         Column(
@@ -87,13 +93,19 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             Header(onBack = onBack)
-            SummaryCard(tasks = state.taskCount, sessions = state.totalSessions, minutes = state.totalMinutes)
-            TimerSettingsCard(state = state, viewModel = viewModel)
-            PreferencesCard(
-                state = state,
-                viewModel = viewModel,
-                onOpenLanguage = { showLanguageDialog = true }
-            )
+            ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
+                SummaryCard(tasks = state.taskCount, sessions = state.totalSessions, minutes = state.totalMinutes)
+            }
+            ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion) {
+                TimerSettingsCard(state = state, viewModel = viewModel)
+            }
+            ScreenEntrance(index = 2, visible = visible, reduceMotion = reduceMotion) {
+                PreferencesCard(
+                    state = state,
+                    viewModel = viewModel,
+                    onOpenLanguage = { showLanguageDialog = true }
+                )
+            }
         }
     }
 
