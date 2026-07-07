@@ -1,5 +1,6 @@
 package com.luis.tramo.ui.tasks
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,13 +30,14 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -144,10 +148,18 @@ fun AddTaskSheet(
 
             // Priority.
             Text(stringResource(R.string.task_priority_label), style = MaterialTheme.typography.labelLarge)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PriorityChip(TaskPriority.HIGH, priority, MaterialTheme.colorScheme.error) { priority = it }
-                PriorityChip(TaskPriority.MEDIUM, priority, WarningColor) { priority = it }
-                PriorityChip(TaskPriority.LOW, priority, MaterialTheme.colorScheme.surfaceVariant) { priority = it }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TaskPriority.entries.forEach { p ->
+                    PriorityButton(
+                        value = p,
+                        selected = priority == p,
+                        onSelect = { priority = p },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             // Emoji icon grid (8x6).
@@ -155,17 +167,23 @@ fun AddTaskSheet(
             LazyVerticalGrid(
                 columns = GridCells.Fixed(8),
                 userScrollEnabled = false,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp)
+                    .height(300.dp)
             ) {
                 items(EMOJIS) { item ->
                     val selected = item == emoji
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                                else Color.Transparent
+                            )
                             .border(
                                 width = if (selected) 2.dp else 0.dp,
                                 color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -252,20 +270,53 @@ fun AddTaskSheet(
     }
 }
 
+/**
+ * Priority selector button. Selected state uses M3 *Container / on*Container role pairs, which are
+ * guaranteed legible in both light and dark — this is what fixes the previously unreadable "Low"
+ * button (surfaceVariant background + onSurfaceVariant text, never dark-on-dark).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PriorityChip(
+private fun PriorityButton(
     value: TaskPriority,
-    selected: TaskPriority,
-    color: Color,
-    onSelect: (TaskPriority) -> Unit
+    selected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    FilterChip(
-        selected = selected == value,
-        onClick = { onSelect(value) },
-        label = { Text(stringResource(value.labelRes), fontWeight = FontWeight.Medium) },
-        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = color)
-    )
-}
+    val container: Color
+    val content: Color
+    when {
+        !selected -> {
+            container = Color.Transparent
+            content = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        value == TaskPriority.HIGH -> {
+            container = MaterialTheme.colorScheme.errorContainer
+            content = MaterialTheme.colorScheme.onErrorContainer
+        }
+        value == TaskPriority.MEDIUM -> {
+            container = MaterialTheme.colorScheme.tertiaryContainer
+            content = MaterialTheme.colorScheme.onTertiaryContainer
+        }
+        else -> { // LOW
+            container = MaterialTheme.colorScheme.surfaceVariant
+            content = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    }
 
-private val WarningColor = Color(0xFFF59E0B)
+    Surface(
+        onClick = onSelect,
+        shape = RoundedCornerShape(12.dp),
+        color = container,
+        contentColor = content,
+        border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier.height(44.dp)
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = stringResource(value.labelRes),
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            )
+        }
+    }
+}
