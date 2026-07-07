@@ -29,8 +29,11 @@ class UserPreferencesRepository @Inject constructor(
 
     // --- Settings ---
 
-    /** Focus session length in minutes (15 / 25 / 50). Default 25. */
+    /** Custom focus session length in minutes. Default 25. */
     val focusPresetMinutes: Flow<Int> = dataStore.data.map { it[FOCUS_PRESET] ?: DEFAULT_FOCUS_MINUTES }
+
+    /** Custom (short) break length in minutes. Default 5. */
+    val breakPresetMinutes: Flow<Int> = dataStore.data.map { it[BREAK_PRESET] ?: DEFAULT_BREAK_MINUTES }
 
     /** Explicit dark-mode override; null means follow the system setting. */
     val darkModeOverride: Flow<Boolean?> = dataStore.data.map { it[DARK_MODE] }
@@ -43,6 +46,10 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setFocusPreset(minutes: Int) {
         dataStore.edit { it[FOCUS_PRESET] = minutes }
+    }
+
+    suspend fun setBreakPreset(minutes: Int) {
+        dataStore.edit { it[BREAK_PRESET] = minutes }
     }
 
     suspend fun setDarkModeOverride(value: Boolean?) {
@@ -85,12 +92,14 @@ class UserPreferencesRepository @Inject constructor(
 
     private companion object {
         const val DEFAULT_FOCUS_MINUTES = 25
+        const val DEFAULT_BREAK_MINUTES = 5
         const val DEFAULT_DAILY_GOAL = 8
 
         val ONBOARDED = booleanPreferencesKey("onboarded")
         val SESSIONS_COUNT = intPreferencesKey("sessions_today")
         val SESSIONS_DATE = longPreferencesKey("sessions_date")
         val FOCUS_PRESET = intPreferencesKey("focus_preset_minutes")
+        val BREAK_PRESET = intPreferencesKey("break_preset_minutes")
         val DARK_MODE = booleanPreferencesKey("dark_mode_override")
         val DAILY_GOAL = intPreferencesKey("daily_goal")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
