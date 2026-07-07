@@ -11,16 +11,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import com.luis.tramo.R
 
@@ -63,21 +65,33 @@ fun TramoBottomBar(
     }
 }
 
-/** Shared LargeTopAppBar for the three main screens, with the gear (Settings) action. */
+/**
+ * Shared top bar for the main screens: the title sits on the same row as the gear (Settings) action,
+ * over a solid tonal container (matching the bottom NavigationBar). Pass a pinned scroll behavior so
+ * the bar stays visible as content scrolls beneath it.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TramoLargeTopBar(
+fun TramoTopBar(
     @StringRes titleRes: Int,
     onOpenSettings: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
-    LargeTopAppBar(
-        title = { Text(stringResource(titleRes)) },
+    TopAppBar(
+        title = {
+            Text(text = stringResource(titleRes), fontWeight = FontWeight.Bold)
+        },
         actions = {
             IconButton(onClick = onOpenSettings) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
             }
         },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
         scrollBehavior = scrollBehavior
     )
 }
