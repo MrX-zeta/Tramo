@@ -1,14 +1,11 @@
 package com.luis.tramo.ui.settings
 
-import android.app.LocaleManager
-import android.content.Context
-import android.os.Build
-import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luis.tramo.data.UserPreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +30,6 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    @param:ApplicationContext private val context: Context,
     private val preferences: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -111,18 +107,19 @@ class SettingsViewModel @Inject constructor(
         preferences.setDailyGoal(goal.coerceIn(MIN_GOAL, MAX_GOAL))
     }
 
+    /**
+     * Changes the app language dynamically (activity recreates, no full restart) via
+     * [AppCompatDelegate], which backports Android 13's per-app locales to API 21+ and — with the
+     * `autoStoreLocales` service in the manifest — persists and restores the choice.
+     */
     fun setLanguage(tag: String) {
-        viewModelScope.launch { preferences.setLanguageTag(tag) }
-        applyLocale(tag)
-    }
-
-    /** Applies the per-app locale on Android 13+; on older versions the choice is only persisted. */
-    private fun applyLocale(tag: String) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val localeManager = context.getSystemService(LocaleManager::class.java) ?: return
-            localeManager.applicationLocales =
-                if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
+        val locales = if (tag.isEmpty()) {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(tag)
         }
+        AppCompatDelegate.setApplicationLocales(locales)
+        viewModelScope.launch { preferences.setLanguageTag(tag) }
     }
 
     companion object {
