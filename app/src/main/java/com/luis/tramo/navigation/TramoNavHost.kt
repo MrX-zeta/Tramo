@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.luis.tramo.ui.onboarding.OnboardingScreen
+import com.luis.tramo.ui.report.ReportScreen
 import com.luis.tramo.ui.tasks.TaskListScreen
 import com.luis.tramo.ui.timer.TimerScreen
 
@@ -29,11 +30,15 @@ fun TramoNavHost(
         }
         composable(TramoDestinations.TIMER) {
             TimerScreen(
-                onOpenTasks = { navController.navigate(TramoDestinations.TASKS) }
+                onOpenTasks = { navController.navigate(TramoDestinations.TASKS) },
+                onOpenReport = { navController.navigate(TramoDestinations.REPORT) }
             )
         }
         composable(TramoDestinations.TASKS) {
             TaskListScreen()
+        }
+        composable(TramoDestinations.REPORT) {
+            ReportScreen()
         }
     }
 }
