@@ -18,6 +18,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -44,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
+import com.luis.tramo.ui.theme.Spacing
+import com.luis.tramo.ui.theme.TabularFigures
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,17 +124,17 @@ fun SettingsScreen(
                         OutlinedIconButton(
                             onClick = { viewModel.setDailyGoal(state.dailyGoal - 1) },
                             modifier = Modifier.size(40.dp)
-                        ) { Text("–", style = MaterialTheme.typography.titleLarge) }
+                        ) { Icon(Icons.Default.Remove, contentDescription = null) }
                         Text(
                             text = state.dailyGoal.toString(),
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.titleLarge.merge(TabularFigures),
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp)
+                            modifier = Modifier.padding(horizontal = Spacing.lg)
                         )
                         OutlinedIconButton(
                             onClick = { viewModel.setDailyGoal(state.dailyGoal + 1) },
                             modifier = Modifier.size(40.dp)
-                        ) { Text("+", style = MaterialTheme.typography.titleLarge) }
+                        ) { Icon(Icons.Default.Add, contentDescription = null) }
                     }
                 }
 

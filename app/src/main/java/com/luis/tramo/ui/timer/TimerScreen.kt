@@ -53,6 +53,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.navigation.TramoLargeTopBar
 import com.luis.tramo.timer.TimerStatus
+import com.luis.tramo.ui.theme.Spacing
+import com.luis.tramo.ui.theme.TabularFigures
+import com.luis.tramo.ui.theme.TramoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -174,7 +177,7 @@ private fun TimerRing(
         }
         Text(
             text = timeText,
-            style = MaterialTheme.typography.displayMedium,
+            style = MaterialTheme.typography.displayMedium.merge(TabularFigures),
             fontWeight = FontWeight.Bold
         )
     }
@@ -227,11 +230,12 @@ private fun StreakTasksCard(
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🔥", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.size(10.dp))
+                Spacer(Modifier.size(Spacing.sm))
                 Text(
                     text = stringResource(R.string.timer_streak, streak),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium.merge(TabularFigures),
+                    fontWeight = FontWeight.Bold,
+                    color = TramoTheme.progress
                 )
             }
 

@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -40,13 +39,15 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.format.DateTimeFormatter
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.navigation.TramoLargeTopBar
+import com.luis.tramo.ui.components.StatCard
+import com.luis.tramo.ui.theme.Spacing
+import com.luis.tramo.ui.theme.TramoTheme
 import com.luis.tramo.util.formatDuration
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -77,24 +78,27 @@ fun ReportScreen(
                 .fillMaxWidth()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
-            // Lifetime stats.
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                LifetimeStatCard(
-                    label = stringResource(R.string.report_total_completions),
+            // Lifetime stats. Streaks use the reserved progress accent.
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                StatCard(
                     value = heat.totalCompletions.toString(),
+                    label = stringResource(R.string.report_total_completions),
+                    valueColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
-                LifetimeStatCard(
-                    label = stringResource(R.string.report_current_streak),
+                StatCard(
                     value = heat.currentStreak.toString(),
+                    label = stringResource(R.string.report_current_streak),
+                    valueColor = TramoTheme.progress,
                     modifier = Modifier.weight(1f)
                 )
-                LifetimeStatCard(
-                    label = stringResource(R.string.report_longest_streak),
+                StatCard(
                     value = heat.longestStreak.toString(),
+                    label = stringResource(R.string.report_longest_streak),
+                    valueColor = TramoTheme.progress,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -111,27 +115,27 @@ fun ReportScreen(
             }
 
             // Today's totals.
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 StatCard(
-                    label = stringResource(R.string.report_focus_time),
                     value = formatDuration(state.focusSeconds),
+                    label = stringResource(R.string.report_focus_time),
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    label = stringResource(R.string.report_break_time),
                     value = formatDuration(state.breakSeconds),
+                    label = stringResource(R.string.report_break_time),
                     modifier = Modifier.weight(1f)
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 StatCard(
-                    label = stringResource(R.string.report_avg_session),
                     value = formatDuration(state.avgSessionSeconds),
+                    label = stringResource(R.string.report_avg_session),
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    label = stringResource(R.string.report_session_count),
                     value = state.sessionCount.toString(),
+                    label = stringResource(R.string.report_session_count),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -200,53 +204,6 @@ private fun ChartEmptyState() {
             Text(
                 text = stringResource(R.string.report_empty_state),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Card(modifier = modifier) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun LifetimeStatCard(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    ElevatedCard(shape = RoundedCornerShape(20.dp), modifier = modifier) {
-        Column(Modifier.padding(vertical = 16.dp, horizontal = 12.dp)) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

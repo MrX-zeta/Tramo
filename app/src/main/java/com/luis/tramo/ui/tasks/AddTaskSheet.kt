@@ -59,6 +59,7 @@ import com.luis.tramo.R
 import com.luis.tramo.data.task.Subtask
 import com.luis.tramo.data.task.TaskCategory
 import com.luis.tramo.data.task.TaskPriority
+import com.luis.tramo.ui.theme.TaskSwatches
 import kotlinx.coroutines.delay
 
 private data class TaskTemplate(val labelRes: Int, val title: String, val emoji: String)
@@ -79,11 +80,6 @@ private val EMOJIS = listOf(
     "🍵", "🎧", "🎵", "🎬", "📷", "🌱", "🔥", "⭐"
 )
 
-private val SWATCHES = listOf(
-    0xFF6366F1L, 0xFF0EA5A4L, 0xFFF59E0BL, 0xFFEF4444L, 0xFF10B981L,
-    0xFF3B82F6L, 0xFFEC4899L, 0xFF8B5CF6L, 0xFF64748BL, 0xFFF97316L
-)
-
 private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -99,7 +95,7 @@ fun AddTaskSheet(
     var title by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf(TaskPriority.MEDIUM) }
-    var colorArgb by remember { mutableStateOf(SWATCHES.first()) }
+    var colorArgb by remember { mutableStateOf(TaskSwatches.first()) }
     var recurring by remember { mutableStateOf(false) }
     val recurringDays = remember { mutableStateListOf<Int>() }
 
@@ -200,7 +196,7 @@ fun AddTaskSheet(
             // Color swatches.
             Text(stringResource(R.string.task_color_label), style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(SWATCHES) { argb ->
+                items(TaskSwatches) { argb ->
                     val selected = argb == colorArgb
                     Box(
                         modifier = Modifier

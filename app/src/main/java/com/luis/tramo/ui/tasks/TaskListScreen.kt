@@ -27,8 +27,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.data.task.TaskEntity
+import com.luis.tramo.ui.theme.TramoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,10 +78,7 @@ fun TaskListScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            ScrollableTabRow(
-                selectedTabIndex = filter.ordinal,
-                edgePadding = 16.dp
-            ) {
+            PrimaryTabRow(selectedTabIndex = filter.ordinal) {
                 TaskFilter.entries.forEach { entry ->
                     Tab(
                         selected = filter == entry,
@@ -182,7 +180,7 @@ private fun TaskCard(
                     Spacer(Modifier.height(12.dp))
                     LinearProgressIndicator(
                         progress = { task.progress },
-                        color = MaterialTheme.colorScheme.primary,
+                        color = TramoTheme.progress,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         strokeCap = StrokeCap.Round,
                         modifier = Modifier
