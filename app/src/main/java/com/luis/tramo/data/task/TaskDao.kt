@@ -19,6 +19,9 @@ interface TaskDao {
     @Query("SELECT COUNT(*) FROM tasks")
     suspend fun count(): Int
 
+    @Query("SELECT COUNT(*) FROM tasks")
+    fun taskCount(): Flow<Int>
+
     @Insert
     suspend fun insert(task: TaskEntity): Long
 

@@ -73,6 +73,9 @@ interface SessionDao {
     @Query("SELECT COUNT(*) FROM session_records WHERE type = 'FOCUS'")
     fun totalFocusCount(): Flow<Int>
 
+    @Query("SELECT COALESCE(SUM(durationSeconds), 0) FROM session_records WHERE type = 'FOCUS'")
+    fun totalFocusSeconds(): Flow<Int>
+
     /**
      * Longest all-time streak of consecutive focus days, computed with a recursive CTE:
      * `days` = distinct focus days; `streak` walks forward from each day that starts a run

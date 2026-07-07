@@ -12,6 +12,7 @@ class TaskRepository @Inject constructor(
     fun completedTasks(): Flow<List<TaskEntity>> = dao.completedTasks()
 
     suspend fun count(): Int = dao.count()
+    fun taskCount(): Flow<Int> = dao.taskCount()
     suspend fun add(task: TaskEntity): Long = dao.insert(task)
     suspend fun update(task: TaskEntity) = dao.update(task)
     suspend fun delete(task: TaskEntity) = dao.delete(task)

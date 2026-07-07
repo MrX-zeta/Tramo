@@ -43,11 +43,29 @@ class UserPreferencesRepository @Inject constructor(
     /** Custom (short) break length in minutes. Default 5. */
     val breakPresetMinutes: Flow<Int> = dataStore.data.map { it[BREAK_PRESET] ?: DEFAULT_BREAK_MINUTES }
 
+    /** Long-break length in minutes. Default 15. */
+    val longBreakMinutes: Flow<Int> = dataStore.data.map { it[LONG_BREAK] ?: DEFAULT_LONG_BREAK_MINUTES }
+
+    /** Completed focus sessions before a long break replaces the short one. Default 4. */
+    val sessionsBeforeLongBreak: Flow<Int> = dataStore.data.map { it[SESSIONS_BEFORE_LONG] ?: DEFAULT_SESSIONS_BEFORE_LONG }
+
     /** Explicit dark-mode override; null means follow the system setting. */
     val darkModeOverride: Flow<Boolean?> = dataStore.data.map { it[DARK_MODE] }
 
     /** Daily focus-session goal. Default 8. */
     val dailyGoal: Flow<Int> = dataStore.data.map { it[DAILY_GOAL] ?: DEFAULT_DAILY_GOAL }
+
+    /** Keep the screen on while a session runs. Default off. */
+    val keepScreenOn: Flow<Boolean> = dataStore.data.map { it[KEEP_SCREEN_ON] ?: false }
+
+    /** Auto-start the break after a focus session ends. Default on. */
+    val autoStartBreaks: Flow<Boolean> = dataStore.data.map { it[AUTO_START_BREAKS] ?: true }
+
+    /** Auto-start the next focus session after a break ends. Default off. */
+    val autoStartNextFocus: Flow<Boolean> = dataStore.data.map { it[AUTO_START_FOCUS] ?: false }
+
+    /** Play sound + vibration on cycle completion. Default on. */
+    val soundVibrationOnFinish: Flow<Boolean> = dataStore.data.map { it[SOUND_VIBRATION] ?: true }
 
     /** BCP-47 language tag; empty means follow the system locale. */
     val languageTag: Flow<String> = dataStore.data.map { it[LANGUAGE_TAG] ?: "" }
@@ -58,6 +76,30 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setBreakPreset(minutes: Int) {
         dataStore.edit { it[BREAK_PRESET] = minutes }
+    }
+
+    suspend fun setLongBreakMinutes(minutes: Int) {
+        dataStore.edit { it[LONG_BREAK] = minutes }
+    }
+
+    suspend fun setSessionsBeforeLongBreak(count: Int) {
+        dataStore.edit { it[SESSIONS_BEFORE_LONG] = count }
+    }
+
+    suspend fun setKeepScreenOn(value: Boolean) {
+        dataStore.edit { it[KEEP_SCREEN_ON] = value }
+    }
+
+    suspend fun setAutoStartBreaks(value: Boolean) {
+        dataStore.edit { it[AUTO_START_BREAKS] = value }
+    }
+
+    suspend fun setAutoStartNextFocus(value: Boolean) {
+        dataStore.edit { it[AUTO_START_FOCUS] = value }
+    }
+
+    suspend fun setSoundVibrationOnFinish(value: Boolean) {
+        dataStore.edit { it[SOUND_VIBRATION] = value }
     }
 
     suspend fun setDarkModeOverride(value: Boolean?) {
@@ -115,13 +157,21 @@ class UserPreferencesRepository @Inject constructor(
     private companion object {
         const val DEFAULT_FOCUS_MINUTES = 25
         const val DEFAULT_BREAK_MINUTES = 5
+        const val DEFAULT_LONG_BREAK_MINUTES = 15
+        const val DEFAULT_SESSIONS_BEFORE_LONG = 4
         const val DEFAULT_DAILY_GOAL = 8
 
         val ONBOARDED = booleanPreferencesKey("onboarded")
         val FOCUS_PRESET = intPreferencesKey("focus_preset_minutes")
         val BREAK_PRESET = intPreferencesKey("break_preset_minutes")
+        val LONG_BREAK = intPreferencesKey("long_break_minutes")
+        val SESSIONS_BEFORE_LONG = intPreferencesKey("sessions_before_long_break")
         val DARK_MODE = booleanPreferencesKey("dark_mode_override")
         val DAILY_GOAL = intPreferencesKey("daily_goal")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
+        val AUTO_START_BREAKS = booleanPreferencesKey("auto_start_breaks")
+        val AUTO_START_FOCUS = booleanPreferencesKey("auto_start_next_focus")
+        val SOUND_VIBRATION = booleanPreferencesKey("sound_vibration_on_finish")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
 
         val ACTIVE_TYPE = stringPreferencesKey("active_session_type")
