@@ -21,5 +21,6 @@ class SessionRepository @Inject constructor(
     fun focusCountsByDay(startMillis: Long): Flow<List<DayCount>> = dao.focusCountsByDay(startMillis)
     fun totalFocusCount(): Flow<Int> = dao.totalFocusCount()
     fun totalFocusSeconds(): Flow<Int> = dao.totalFocusSeconds()
+    fun focusCountsByMonth(startMillis: Long): Flow<List<MonthCount>> = dao.focusCountsByMonth(startMillis)
     fun longestStreak(): Flow<Int> = dao.longestStreak()
 }

@@ -18,6 +18,12 @@ data class DayCount(
     val count: Int
 )
 
+/** Focus session count for a single local month (yyyy-MM), for the monthly-activity chart. */
+data class MonthCount(
+    val month: String,
+    val count: Int
+)
+
 /** Focus seconds summed for a single local calendar day, for the per-day report chart. */
 data class DailyFocus(
     val day: String,

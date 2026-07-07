@@ -66,6 +66,17 @@ interface SessionDao {
     @Query("SELECT COALESCE(SUM(durationSeconds), 0) FROM session_records WHERE type = 'FOCUS'")
     fun totalFocusSeconds(): Flow<Int>
 
+    /** Focus session counts per local month (yyyy-MM) since [startMillis], for the monthly chart. */
+    @Query(
+        """
+        SELECT strftime('%Y-%m', completedAt / 1000, 'unixepoch', 'localtime') AS month, COUNT(*) AS count
+        FROM session_records
+        WHERE type = 'FOCUS' AND completedAt >= :startMillis
+        GROUP BY month
+        """
+    )
+    fun focusCountsByMonth(startMillis: Long): Flow<List<MonthCount>>
+
     /**
      * Longest all-time streak of consecutive focus days, computed with a recursive CTE:
      * `days` = distinct focus days; `streak` walks forward from each day that starts a run
