@@ -44,6 +44,26 @@
     <string name="settings_language">Idioma</string>
     <string name="settings_close">Cerrar</string>
     <string name="settings_language_system">Predeterminado del sistema</string>
+    <string name="settings_subtitle">Personaliza tu experiencia</string>
+    <string name="settings_summary_tasks">Tareas</string>
+    <string name="settings_summary_sessions">Sesiones</string>
+    <string name="settings_summary_minutes">Minutos</string>
+    <string name="settings_timer_eyebrow">AJUSTES DEL TEMPORIZADOR</string>
+    <string name="settings_prefs_eyebrow">PREFERENCIAS</string>
+    <string name="settings_long_break">Descanso largo</string>
+    <string name="settings_notifications_title">Notificaciones</string>
+    <string name="settings_notifications_subtitle">Gestiona las notificaciones</string>
+    <string name="settings_notifications_enabled">Activadas</string>
+    <string name="settings_notifications_disabled">Desactivadas</string>
+    <string name="settings_language_subtitle">Elige tu idioma</string>
+    <string name="settings_dark_subtitle">Cambia entre tema claro y oscuro</string>
+    <string name="settings_keep_screen_title">Mantener pantalla encendida</string>
+    <string name="settings_keep_screen_subtitle">Evita que la pantalla se apague durante una sesión</string>
+    <string name="settings_daily_goal_subtitle">Tu objetivo de sesiones por día</string>
+    <string name="settings_auto_breaks_title">Auto-iniciar descansos</string>
+    <string name="settings_auto_focus_title">Auto-iniciar siguiente concentración</string>
+    <string name="settings_sessions_before_long_title">Sesiones antes del descanso largo</string>
+    <string name="settings_sound_title">Sonido y vibración al terminar</string>
 
     <!-- Report -->
     <string name="report_title">Informe diario</string>

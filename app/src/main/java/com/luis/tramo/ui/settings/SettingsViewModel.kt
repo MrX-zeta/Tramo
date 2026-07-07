@@ -5,113 +5,114 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luis.tramo.data.UserPreferencesRepository
+import com.luis.tramo.data.session.SessionRepository
+import com.luis.tramo.data.task.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Validation problems surfaced on the timer text fields. */
-enum class FieldError { INVALID_NUMBER, FOCUS_BELOW_BREAK }
-
 data class SettingsUiState(
-    val focusInput: String = "",
-    val breakInput: String = "",
-    val focusError: FieldError? = null,
-    val breakError: FieldError? = null,
+    // Summary (Room-derived).
+    val taskCount: Int = 0,
+    val totalSessions: Int = 0,
+    val totalMinutes: Int = 0,
+    // Timer durations.
+    val focusMinutes: Int = 25,
+    val breakMinutes: Int = 5,
+    val longBreakMinutes: Int = 15,
+    val sessionsBeforeLongBreak: Int = 4,
+    // Preferences.
     val darkOverride: Boolean? = null,
+    val keepScreenOn: Boolean = false,
+    val autoStartBreaks: Boolean = true,
+    val autoStartNextFocus: Boolean = false,
+    val soundVibration: Boolean = true,
     val dailyGoal: Int = 8,
     val languageTag: String = ""
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val preferences: UserPreferencesRepository
+    private val preferences: UserPreferencesRepository,
+    taskRepository: TaskRepository,
+    sessionRepository: SessionRepository
 ) : ViewModel() {
 
-    // Editable field state, seeded once from the persisted values.
-    private val focusInput = MutableStateFlow("")
-    private val breakInput = MutableStateFlow("")
+    private data class Summary(val tasks: Int, val sessions: Int, val minutes: Int)
+    private data class TimerCfg(val focus: Int, val breakM: Int, val longBreak: Int, val sessionsBeforeLong: Int)
+    private data class Toggles(val dark: Boolean?, val keep: Boolean, val autoBreaks: Boolean, val autoFocus: Boolean, val sound: Boolean)
+    private data class Misc(val dailyGoal: Int, val language: String)
 
-    val uiState: StateFlow<SettingsUiState> = combine(
-        focusInput,
-        breakInput,
+    private val summaryFlow = combine(
+        taskRepository.taskCount(),
+        sessionRepository.totalFocusCount(),
+        sessionRepository.totalFocusSeconds()
+    ) { tasks, sessions, seconds -> Summary(tasks, sessions, seconds / 60) }
+
+    private val timerFlow = combine(
+        preferences.focusPresetMinutes,
+        preferences.breakPresetMinutes,
+        preferences.longBreakMinutes,
+        preferences.sessionsBeforeLongBreak
+    ) { focus, breakM, longBreak, before -> TimerCfg(focus, breakM, longBreak, before) }
+
+    private val togglesFlow = combine(
         preferences.darkModeOverride,
+        preferences.keepScreenOn,
+        preferences.autoStartBreaks,
+        preferences.autoStartNextFocus,
+        preferences.soundVibrationOnFinish
+    ) { dark, keep, autoBreaks, autoFocus, sound -> Toggles(dark, keep, autoBreaks, autoFocus, sound) }
+
+    private val miscFlow = combine(
         preferences.dailyGoal,
         preferences.languageTag
-    ) { focus, breaks, dark, goal, language ->
-        val (focusError, breakError) = validate(focus, breaks)
+    ) { goal, language -> Misc(goal, language) }
+
+    val uiState: StateFlow<SettingsUiState> = combine(
+        summaryFlow, timerFlow, togglesFlow, miscFlow
+    ) { summary, timer, toggles, misc ->
         SettingsUiState(
-            focusInput = focus,
-            breakInput = breaks,
-            focusError = focusError,
-            breakError = breakError,
-            darkOverride = dark,
-            dailyGoal = goal,
-            languageTag = language
+            taskCount = summary.tasks,
+            totalSessions = summary.sessions,
+            totalMinutes = summary.minutes,
+            focusMinutes = timer.focus,
+            breakMinutes = timer.breakM,
+            longBreakMinutes = timer.longBreak,
+            sessionsBeforeLongBreak = timer.sessionsBeforeLong,
+            darkOverride = toggles.dark,
+            keepScreenOn = toggles.keep,
+            autoStartBreaks = toggles.autoBreaks,
+            autoStartNextFocus = toggles.autoFocus,
+            soundVibration = toggles.sound,
+            dailyGoal = misc.dailyGoal,
+            languageTag = misc.language
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
-    init {
-        viewModelScope.launch {
-            focusInput.value = preferences.focusPresetMinutes.first().toString()
-            breakInput.value = preferences.breakPresetMinutes.first().toString()
-        }
-    }
+    // --- Every setter writes to DataStore immediately (no Save button). ---
 
-    fun onFocusChange(value: String) {
-        focusInput.value = value.filter { it.isDigit() }.take(3)
-        persistIfValid()
-    }
-
-    fun onBreakChange(value: String) {
-        breakInput.value = value.filter { it.isDigit() }.take(3)
-        persistIfValid()
-    }
-
-    /** Persists both values to DataStore only when the whole form is valid. */
-    private fun persistIfValid() {
-        val focus = focusInput.value.toIntOrNull()
-        val breaks = breakInput.value.toIntOrNull()
-        if (focus != null && breaks != null && focus > 0 && breaks > 0 && focus >= breaks) {
-            viewModelScope.launch {
-                preferences.setFocusPreset(focus)
-                preferences.setBreakPreset(breaks)
-            }
-        }
-    }
-
-    private fun validate(focus: String, breaks: String): Pair<FieldError?, FieldError?> {
-        val f = focus.toIntOrNull()
-        val b = breaks.toIntOrNull()
-        val breakError = if (b == null || b <= 0) FieldError.INVALID_NUMBER else null
-        val focusError = when {
-            f == null || f <= 0 -> FieldError.INVALID_NUMBER
-            breakError == null && f < b!! -> FieldError.FOCUS_BELOW_BREAK
-            else -> null
-        }
-        return focusError to breakError
-    }
-
-    // Every setter below writes to DataStore immediately — there is no Save button.
-
-    fun setDarkOverride(value: Boolean?) = viewModelScope.launch {
-        preferences.setDarkModeOverride(value)
-    }
+    fun setFocusPreset(minutes: Int) = viewModelScope.launch { preferences.setFocusPreset(minutes) }
+    fun setBreakPreset(minutes: Int) = viewModelScope.launch { preferences.setBreakPreset(minutes) }
+    fun setLongBreak(minutes: Int) = viewModelScope.launch { preferences.setLongBreakMinutes(minutes) }
+    fun setDarkOverride(value: Boolean?) = viewModelScope.launch { preferences.setDarkModeOverride(value) }
+    fun setKeepScreenOn(value: Boolean) = viewModelScope.launch { preferences.setKeepScreenOn(value) }
+    fun setAutoStartBreaks(value: Boolean) = viewModelScope.launch { preferences.setAutoStartBreaks(value) }
+    fun setAutoStartNextFocus(value: Boolean) = viewModelScope.launch { preferences.setAutoStartNextFocus(value) }
+    fun setSoundVibration(value: Boolean) = viewModelScope.launch { preferences.setSoundVibrationOnFinish(value) }
 
     fun setDailyGoal(goal: Int) = viewModelScope.launch {
         preferences.setDailyGoal(goal.coerceIn(MIN_GOAL, MAX_GOAL))
     }
 
-    /**
-     * Changes the app language dynamically (activity recreates, no full restart) via
-     * [AppCompatDelegate], which backports Android 13's per-app locales to API 21+ and — with the
-     * `autoStoreLocales` service in the manifest — persists and restores the choice.
-     */
+    fun setSessionsBeforeLongBreak(count: Int) = viewModelScope.launch {
+        preferences.setSessionsBeforeLongBreak(count.coerceIn(MIN_SESSIONS_BEFORE_LONG, MAX_SESSIONS_BEFORE_LONG))
+    }
+
     fun setLanguage(tag: String) {
         val locales = if (tag.isEmpty()) {
             LocaleListCompat.getEmptyLocaleList()
@@ -125,5 +126,11 @@ class SettingsViewModel @Inject constructor(
     companion object {
         const val MIN_GOAL = 1
         const val MAX_GOAL = 16
+        const val MIN_SESSIONS_BEFORE_LONG = 2
+        const val MAX_SESSIONS_BEFORE_LONG = 8
+
+        val FOCUS_OPTIONS = listOf(5, 10, 25)
+        val BREAK_OPTIONS = listOf(5, 10, 15)
+        val LONG_BREAK_OPTIONS = listOf(15, 20, 30)
     }
 }

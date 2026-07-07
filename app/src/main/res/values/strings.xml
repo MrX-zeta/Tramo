@@ -49,6 +49,26 @@
     <string name="settings_language">Language</string>
     <string name="settings_close">Close</string>
     <string name="settings_language_system">System default</string>
+    <string name="settings_subtitle">Customize your experience</string>
+    <string name="settings_summary_tasks">Tasks</string>
+    <string name="settings_summary_sessions">Sessions</string>
+    <string name="settings_summary_minutes">Minutes</string>
+    <string name="settings_timer_eyebrow">TIMER SETTINGS</string>
+    <string name="settings_prefs_eyebrow">PREFERENCES</string>
+    <string name="settings_long_break">Long break</string>
+    <string name="settings_notifications_title">Notifications</string>
+    <string name="settings_notifications_subtitle">Manage notifications</string>
+    <string name="settings_notifications_enabled">Enabled</string>
+    <string name="settings_notifications_disabled">Disabled</string>
+    <string name="settings_language_subtitle">Choose your language</string>
+    <string name="settings_dark_subtitle">Switch between light and dark theme</string>
+    <string name="settings_keep_screen_title">Keep screen on</string>
+    <string name="settings_keep_screen_subtitle">Prevents the screen from turning off during a session</string>
+    <string name="settings_daily_goal_subtitle">Your target sessions per day</string>
+    <string name="settings_auto_breaks_title">Auto-start breaks</string>
+    <string name="settings_auto_focus_title">Auto-start next focus</string>
+    <string name="settings_sessions_before_long_title">Sessions before long break</string>
+    <string name="settings_sound_title">Sound and vibration on finish</string>
 
     <!-- Report -->
     <string name="report_title">Daily Report</string>
