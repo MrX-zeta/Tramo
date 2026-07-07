@@ -84,6 +84,13 @@
     <string name="report_activity_title">Activity</string>
     <string name="report_total_sessions">Total sessions</string>
     <string name="report_active_days">Active days</string>
+    <string name="report_today_title">Today\'s focus</string>
+    <string name="report_label_focus">Focus</string>
+    <string name="report_label_break">Break</string>
+    <string name="report_total_focus_time">Total focus time</string>
+    <string name="report_avg_focus">Avg focus</string>
+    <string name="report_activity_map">Activity map</string>
+    <string name="report_monthly_activity">Monthly activity</string>
     <string name="report_daily_chart_title">Focus minutes per day</string>
     <string name="report_empty_state">Start your first focus session</string>
 

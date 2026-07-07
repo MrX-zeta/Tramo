@@ -79,6 +79,13 @@
     <string name="report_activity_title">Actividad</string>
     <string name="report_total_sessions">Sesiones totales</string>
     <string name="report_active_days">Días activos</string>
+    <string name="report_today_title">Concentración de hoy</string>
+    <string name="report_label_focus">Concentración</string>
+    <string name="report_label_break">Descanso</string>
+    <string name="report_total_focus_time">Tiempo total de concentración</string>
+    <string name="report_avg_focus">Concentración promedio</string>
+    <string name="report_activity_map">Mapa de actividad</string>
+    <string name="report_monthly_activity">Actividad mensual</string>
     <string name="report_daily_chart_title">Minutos de concentración por día</string>
     <string name="report_empty_state">Empieza tu primera sesión de concentración</string>
 
