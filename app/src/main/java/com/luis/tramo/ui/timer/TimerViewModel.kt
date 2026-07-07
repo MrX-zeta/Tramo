@@ -33,7 +33,9 @@ data class TimerUiState(
     val progress: Float = 0f,
     val completedFocusToday: Int = 0,
     val streak: Int = 0,
-    val todaysTasks: List<TaskPreview> = emptyList()
+    val todaysTasks: List<TaskPreview> = emptyList(),
+    /** True only when the "keep screen on" preference is enabled AND a session is running. */
+    val keepScreenOn: Boolean = false
 ) {
     val isRunning: Boolean get() = status == TimerStatus.RUNNING
 }
@@ -56,12 +58,14 @@ class TimerViewModel @Inject constructor(
             stateHolder.state,
             sessionRepository.focusCountSince(todayStart),
             sessionRepository.focusDayStamps(),
-            taskRepository.activeTasks()
-        ) { timer, count, dayStamps, tasks ->
+            taskRepository.activeTasks(),
+            preferences.keepScreenOn
+        ) { timer, count, dayStamps, tasks, keepScreenOn ->
             timer.toUiState(
                 count = count,
                 streak = computeStreak(dayStamps),
-                tasks = tasks.take(TASK_PREVIEW_LIMIT).map { it.toPreview() }
+                tasks = tasks.take(TASK_PREVIEW_LIMIT).map { it.toPreview() },
+                keepScreenOn = keepScreenOn && timer.status == TimerStatus.RUNNING
             )
         }.stateIn(
             scope = viewModelScope,
@@ -116,14 +120,15 @@ class TimerViewModel @Inject constructor(
 
     private fun send(action: String) = PomodoroTimerService.sendAction(context, action)
 
-    private fun TimerState.toUiState(count: Int, streak: Int, tasks: List<TaskPreview>) = TimerUiState(
+    private fun TimerState.toUiState(count: Int, streak: Int, tasks: List<TaskPreview>, keepScreenOn: Boolean) = TimerUiState(
         sessionType = sessionType,
         status = status,
         timeText = formatTime(remainingSeconds),
         progress = progress,
         completedFocusToday = count,
         streak = streak,
-        todaysTasks = tasks
+        todaysTasks = tasks,
+        keepScreenOn = keepScreenOn
     )
 
     private fun TaskEntity.toPreview() = TaskPreview(emoji = iconEmoji, title = title)

@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -66,6 +68,13 @@ fun TimerScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    // Keep the screen awake only while enabled AND a session is running.
+    val view = LocalView.current
+    DisposableEffect(state.keepScreenOn) {
+        view.keepScreenOn = state.keepScreenOn
+        onDispose { view.keepScreenOn = false }
+    }
 
     // Subtle entrance that matches the onboarding motion.
     var visible by remember { mutableStateOf(false) }
