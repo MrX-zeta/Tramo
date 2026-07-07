@@ -11,6 +11,9 @@ interface SessionDao {
     @Insert
     suspend fun insert(record: SessionRecordEntity)
 
+    @Query("DELETE FROM session_records")
+    suspend fun deleteAll()
+
     /** Focus seconds grouped by local hour-of-day since [startMillis]. */
     @Query(
         """
