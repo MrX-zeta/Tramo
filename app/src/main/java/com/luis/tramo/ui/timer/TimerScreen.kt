@@ -1,11 +1,7 @@
 package com.luis.tramo.ui.timer
 
-import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,7 +49,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +58,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.timer.TimerStatus
+import com.luis.tramo.ui.components.ScreenEntrance
+import com.luis.tramo.ui.components.rememberReduceMotion
 import com.luis.tramo.ui.theme.Spacing
 import com.luis.tramo.ui.theme.TabularFigures
 import com.luis.tramo.ui.theme.TramoTheme
@@ -102,7 +99,7 @@ fun TimerScreen(
                 .padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
-            EntranceItem(index = 0, visible = visible, reduceMotion = reduceMotion) {
+            ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
                 TimerSessionCard(
                     state = state,
                     onPlayPause = viewModel::onPlayPause,
@@ -110,10 +107,10 @@ fun TimerScreen(
                     onStop = viewModel::onStop
                 )
             }
-            EntranceItem(index = 1, visible = visible, reduceMotion = reduceMotion) {
+            ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion) {
                 StreakCard(streak = state.streak, weekDots = state.weekDots)
             }
-            EntranceItem(index = 2, visible = visible, reduceMotion = reduceMotion) {
+            ScreenEntrance(index = 2, visible = visible, reduceMotion = reduceMotion) {
                 TasksCard(tasks = state.todaysTasks)
             }
         }
@@ -270,36 +267,6 @@ private fun TasksCard(tasks: List<TaskPreview>) {
                 }
             }
         }
-    }
-}
-
-/** One restrained, staggered fade/slide entrance. Skipped entirely when reduced motion is on. */
-@Composable
-private fun EntranceItem(
-    index: Int,
-    visible: Boolean,
-    reduceMotion: Boolean,
-    content: @Composable () -> Unit
-) {
-    if (reduceMotion) {
-        content()
-        return
-    }
-    val delay = index * 90
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(400, delayMillis = delay)) +
-            slideInVertically(tween(400, delayMillis = delay)) { it / 8 }
-    ) {
-        content()
-    }
-}
-
-@Composable
-private fun rememberReduceMotion(): Boolean {
-    val resolver = LocalContext.current.contentResolver
-    return remember {
-        Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
     }
 }
 
