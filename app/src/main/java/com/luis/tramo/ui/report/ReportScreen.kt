@@ -9,26 +9,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -38,6 +39,8 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,8 +52,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.DayOfWeek
@@ -85,6 +90,7 @@ import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 private val CARD_SHAPE = RoundedCornerShape(Spacing.xl)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
     bottomBar: @Composable () -> Unit = {},
@@ -100,69 +106,99 @@ fun ReportScreen(
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
+    // enterAlways: the solid bar scrolls off on the way down and snaps back on the way up. Its
+    // opaque tonal container keeps content reading cleanly beneath it — never a floating title.
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Scaffold(
-        topBar = { ReportHeader(onOpenSettings) },
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { ReportHeader(onOpenSettings, scrollBehavior) },
         bottomBar = bottomBar
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = Spacing.lg)
-                .padding(bottom = Spacing.lg),
+        // LazyColumn so each card composes lazily on scroll — off-screen cards, the heatmap grid and
+        // both charts no longer all compose the instant the tab opens (the source of the residual lag).
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            // Scaffold innerPadding fed as contentPadding so content scrolls cleanly beneath the bar.
+            contentPadding = PaddingValues(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                top = innerPadding.calculateTopPadding() + Spacing.lg,
+                bottom = innerPadding.calculateBottomPadding() + Spacing.lg
+            ),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
             // Entrance animation applies to the summary/KPI cards only; the chart & heatmap cards
             // keep their own existing animations (no double-animation).
-            ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
-                TodayCard(today)
-            }
-            OverviewCard(state = state, onSelectRange = viewModel::selectRange)
-            ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion) {
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    StatCard(
-                        value = heat.totalCompletions.toString(),
-                        label = stringResource(R.string.report_total_sessions),
-                        valueColor = MaterialTheme.colorScheme.primary,
-                        icon = Icons.Filled.CheckCircle,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        value = heat.activeDays.toString(),
-                        label = stringResource(R.string.report_active_days),
-                        valueColor = MaterialTheme.colorScheme.primary,
-                        icon = Icons.Filled.LocalFireDepartment,
-                        iconTint = TramoTheme.progress,
-                        modifier = Modifier.weight(1f)
-                    )
+            item {
+                ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
+                    TodayCard(today)
                 }
             }
-            HeatmapCard(cells = heat.cells, columnLabels = heat.columnLabels)
-            MonthlyCard(monthly = monthly)
+            item {
+                OverviewCard(state = state, onSelectRange = viewModel::selectRange)
+            }
+            item {
+                ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        StatCard(
+                            value = heat.totalCompletions.toString(),
+                            label = stringResource(R.string.report_total_sessions),
+                            valueColor = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Filled.CheckCircle,
+                            modifier = Modifier.weight(1f)
+                        )
+                        StatCard(
+                            value = heat.activeDays.toString(),
+                            label = stringResource(R.string.report_active_days),
+                            valueColor = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Filled.LocalFireDepartment,
+                            iconTint = TramoTheme.progress,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+            item {
+                HeatmapCard(cells = heat.cells, columnLabels = heat.columnLabels)
+            }
+            item {
+                MonthlyCard(monthly = monthly)
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReportHeader(onOpenSettings: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = stringResource(R.string.report_title),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f)
-        )
-        IconButton(onClick = onOpenSettings) {
-            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
-        }
-    }
+private fun ReportHeader(
+    onOpenSettings: () -> Unit,
+    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = stringResource(R.string.report_title),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        actions = {
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
+            }
+        },
+        // Solid tonal container (matches the bottom NavigationBar) so cards never bleed under the title.
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        scrollBehavior = scrollBehavior
+    )
 }
 
 // --- Card 1: today's focus summary ---
@@ -248,7 +284,10 @@ private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> U
                 }
             }
             Spacer(Modifier.height(Spacing.lg))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg)
+            ) {
                 StatColumn(formatDuration(state.rangeFocusSeconds), stringResource(R.string.report_total_focus_time))
                 StatColumn(formatDuration(state.avgSessionSeconds), stringResource(R.string.report_avg_focus))
                 StatColumn(state.rangeSessionCount.toString(), stringResource(R.string.report_total_sessions))
@@ -268,22 +307,39 @@ private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> U
 }
 
 @Composable
-private fun StatColumn(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(96.dp)) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge.merge(TabularFigures),
-            fontWeight = FontWeight.Bold
-        )
+private fun RowScope.StatColumn(value: String, label: String) {
+    // Each column takes an equal share of the row; the value sits in a reserved, top-aligned box so a
+    // one-line value ("42") and a two-line value ("30h 25m") both anchor their label at the same y.
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.weight(1f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(STAT_VALUE_HEIGHT),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium.merge(TabularFigures),
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
         Spacer(Modifier.height(Spacing.xs))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
             minLines = 2
         )
     }
 }
+
+// Reserves room for up to two lines of the value so all three columns' labels line up.
+private val STAT_VALUE_HEIGHT = 48.dp
 
 // --- Card 4: heatmap ---
 
@@ -414,14 +470,15 @@ private fun MonthlyCard(monthly: MonthlyUiState) {
     ElevatedCard(shape = CARD_SHAPE, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             Text(stringResource(R.string.report_monthly_activity), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(Spacing.lg))
+            Spacer(Modifier.height(Spacing.md))
             if (monthly.counts.all { it == 0 }) {
                 EmptyChartText()
             } else {
+                // Slightly shorter chart area than the overview chart so this card is less dominant.
                 BarChart(
                     values = monthly.counts,
                     labels = monthly.labels,
-                    modifier = Modifier.fillMaxWidth().height(180.dp)
+                    modifier = Modifier.fillMaxWidth().height(140.dp)
                 )
             }
         }
