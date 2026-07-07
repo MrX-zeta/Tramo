@@ -5,4 +5,5 @@ object TramoDestinations {
     const val TIMER = "timer"
     const val TASKS = "tasks"
     const val REPORT = "report"
+    const val SETTINGS = "settings"
 }

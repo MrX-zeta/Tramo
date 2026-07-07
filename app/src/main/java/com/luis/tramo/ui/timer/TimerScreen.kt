@@ -40,6 +40,7 @@ import com.luis.tramo.timer.TimerStatus
 fun TimerScreen(
     onOpenTasks: () -> Unit = {},
     onOpenReport: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: TimerViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -52,11 +53,13 @@ fun TimerScreen(
         ) {
             Text(stringResource(R.string.timer_open_report))
         }
-        TextButton(
-            onClick = onOpenTasks,
-            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
-        ) {
-            Text(stringResource(R.string.timer_open_tasks))
+        Row(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+            TextButton(onClick = onOpenSettings) {
+                Text(stringResource(R.string.timer_open_settings))
+            }
+            TextButton(onClick = onOpenTasks) {
+                Text(stringResource(R.string.timer_open_tasks))
+            }
         }
         Column(
             modifier = Modifier
