@@ -12,12 +12,6 @@ data class SessionRecordEntity(
     val completedAt: Long      // epoch millis
 )
 
-/** Aggregated focus seconds for one hour-of-day bucket (0..23). */
-data class HourlyFocus(
-    val hour: Int,
-    val totalSeconds: Int
-)
-
 /** Focus session count for a single local calendar day (yyyy-MM-dd), for the heatmap. */
 data class DayCount(
     val day: String,
