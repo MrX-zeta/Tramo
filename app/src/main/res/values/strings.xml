@@ -91,6 +91,7 @@
     <string name="report_avg_focus">Avg focus</string>
     <string name="report_activity_map">Activity map</string>
     <string name="report_monthly_activity">Monthly activity</string>
+    <string name="report_sessions_unit">sessions</string>
     <string name="report_daily_chart_title">Focus minutes per day</string>
     <string name="report_empty_state">Start your first focus session</string>
 

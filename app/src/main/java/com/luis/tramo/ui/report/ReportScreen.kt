@@ -27,11 +27,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
@@ -39,7 +36,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +52,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.DayOfWeek
@@ -66,6 +64,7 @@ import java.util.Locale
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
+import com.luis.tramo.navigation.TramoTopBar
 import com.luis.tramo.ui.components.ScreenEntrance
 import com.luis.tramo.ui.components.StatCard
 import com.luis.tramo.ui.components.rememberReduceMotion
@@ -76,6 +75,8 @@ import com.luis.tramo.util.formatDuration
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisLineComponent
+import com.patrykandpatrick.vico.compose.cartesian.axis.rememberAxisTickComponent
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
@@ -83,9 +84,11 @@ import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.Insets
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.data.ExtraStore
+import kotlin.math.roundToInt
 
 private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 private val CARD_SHAPE = RoundedCornerShape(Spacing.xl)
@@ -106,13 +109,12 @@ fun ReportScreen(
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
-    // enterAlways: the solid bar scrolls off on the way down and snaps back on the way up. Its
-    // opaque tonal container keeps content reading cleanly beneath it — never a floating title.
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    // Pinned so the solid title bar stays visible as content scrolls beneath it (same as Tasks).
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { ReportHeader(onOpenSettings, scrollBehavior) },
+        topBar = { TramoTopBar(R.string.report_title, onOpenSettings, scrollBehavior) },
         bottomBar = bottomBar
     ) { innerPadding ->
         // LazyColumn so each card composes lazily on scroll — off-screen cards, the heatmap grid and
@@ -170,35 +172,6 @@ fun ReportScreen(
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ReportHeader(
-    onOpenSettings: () -> Unit,
-    scrollBehavior: androidx.compose.material3.TopAppBarScrollBehavior
-) {
-    TopAppBar(
-        title = {
-            Text(
-                text = stringResource(R.string.report_title),
-                fontWeight = FontWeight.Bold
-            )
-        },
-        actions = {
-            IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
-            }
-        },
-        // Solid tonal container (matches the bottom NavigationBar) so cards never bleed under the title.
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        ),
-        scrollBehavior = scrollBehavior
-    )
 }
 
 // --- Card 1: today's focus summary ---
@@ -296,10 +269,12 @@ private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> U
             if (state.dailyMinutes.all { it == 0 }) {
                 EmptyChartText()
             } else {
+                // Tall enough that the first screen (today + this overview) fills the viewport, so the
+                // KPI cards fall fully below the fold instead of peeking, cut, above the bottom bar.
                 BarChart(
                     values = state.dailyMinutes,
                     labels = state.dailyLabels,
-                    modifier = Modifier.fillMaxWidth().height(180.dp)
+                    modifier = Modifier.fillMaxWidth().height(264.dp)
                 )
             }
         }
@@ -308,26 +283,20 @@ private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> U
 
 @Composable
 private fun RowScope.StatColumn(value: String, label: String) {
-    // Each column takes an equal share of the row; the value sits in a reserved, top-aligned box so a
-    // one-line value ("42") and a two-line value ("30h 25m") both anchor their label at the same y.
+    // Each column takes an equal share of the row. The value is a single line, so its label sits right
+    // beneath it with only a hair of spacing; minLines = 2 keeps the three labels vertically aligned.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.weight(1f)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(STAT_VALUE_HEIGHT),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium.merge(TabularFigures),
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-        }
-        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.merge(TabularFigures),
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(2.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -337,9 +306,6 @@ private fun RowScope.StatColumn(value: String, label: String) {
         )
     }
 }
-
-// Reserves room for up to two lines of the value so all three columns' labels line up.
-private val STAT_VALUE_HEIGHT = 48.dp
 
 // --- Card 4: heatmap ---
 
@@ -469,16 +435,32 @@ private val ALPHA_BY_LEVEL = floatArrayOf(0f, 0.4f, 0.6f, 0.8f, 1f)
 private fun MonthlyCard(monthly: MonthlyUiState) {
     ElevatedCard(shape = CARD_SHAPE, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
-            Text(stringResource(R.string.report_monthly_activity), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(Spacing.md))
+            // Title with an inline unit caption ("· sesiones"): kept on the title's row (rather than a
+            // separate line below) so the chart can be taller without pushing the KPI cards off-screen.
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(stringResource(R.string.report_monthly_activity), style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = "· " + stringResource(R.string.report_sessions_unit),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+            }
+            Spacer(Modifier.height(Spacing.sm))
             if (monthly.counts.all { it == 0 }) {
                 EmptyChartText()
             } else {
-                // Slightly shorter chart area than the overview chart so this card is less dominant.
+                // Line-less axes with whole-number, well-spaced Y labels and a longer Y axis (taller
+                // bars) than before, still sized so the KPI row + heatmap + this card fit one screen.
                 BarChart(
                     values = monthly.counts,
                     labels = monthly.labels,
-                    modifier = Modifier.fillMaxWidth().height(140.dp)
+                    modifier = Modifier.fillMaxWidth().height(150.dp),
+                    yLabelSize = 12.sp,
+                    yLabelGap = 8.dp,
+                    yStep = niceYStep(monthly.counts.maxOrNull() ?: 0),
+                    hideAxisLines = true
                 )
             }
         }
@@ -505,7 +487,16 @@ private val BarLabelFormatter = CartesianValueFormatter { context, x, _ ->
 }
 
 @Composable
-private fun BarChart(values: List<Int>, labels: List<String>, modifier: Modifier = Modifier) {
+private fun BarChart(
+    values: List<Int>,
+    labels: List<String>,
+    modifier: Modifier = Modifier,
+    // Y-axis (start) tuning — defaults leave the axis untouched (used as-is by the overview chart).
+    yLabelSize: TextUnit = 11.sp,
+    yLabelGap: Dp = 0.dp,
+    yStep: Double? = null,
+    hideAxisLines: Boolean = false
+) {
     val barColor = MaterialTheme.colorScheme.primary
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
     // The transaction drives Vico's built-in grow-in bar animation — a PROTECTED asset. Do not remove.
@@ -521,18 +512,58 @@ private fun BarChart(values: List<Int>, labels: List<String>, modifier: Modifier
         thickness = 14.dp,
         shape = RoundedCornerShape(topStartPercent = 40, topEndPercent = 40)
     )
+    // X-axis (bottom) label — unchanged.
     val label = rememberTextComponent(
         style = androidx.compose.ui.text.TextStyle(color = axisColor, fontSize = 11.sp)
     )
+    // Y-axis (start) label — its own component so size/gap can differ from the X axis. The end margin
+    // is the padding between the numbers and the axis line.
+    val yLabel = rememberTextComponent(
+        style = androidx.compose.ui.text.TextStyle(color = axisColor, fontSize = yLabelSize),
+        margins = Insets(end = yLabelGap)
+    )
+    // A fixed integer step spaces the Y labels out with round values; else Vico's default step placer.
+    val yItemPlacer = remember(yStep) {
+        if (yStep != null) VerticalAxis.ItemPlacer.step({ yStep }) else VerticalAxis.ItemPlacer.step()
+    }
+    // Computed unconditionally (Compose rule), then nulled out when the caller hides the axis lines.
+    val defaultLine = rememberAxisLineComponent()
+    val defaultTick = rememberAxisTickComponent()
+    val axisLine = if (hideAxisLines) null else defaultLine
+    val axisTick = if (hideAxisLines) null else defaultTick
     CartesianChartHost(
         chart = rememberCartesianChart(
             rememberColumnCartesianLayer(ColumnCartesianLayer.ColumnProvider.series(column)),
-            startAxis = VerticalAxis.rememberStart(label = label, guideline = null),
-            bottomAxis = HorizontalAxis.rememberBottom(label = label, guideline = null, valueFormatter = BarLabelFormatter)
+            startAxis = VerticalAxis.rememberStart(
+                line = axisLine,
+                label = yLabel,
+                tick = axisTick,
+                guideline = null,
+                itemPlacer = yItemPlacer,
+                valueFormatter = YIntFormatter
+            ),
+            bottomAxis = HorizontalAxis.rememberBottom(
+                line = axisLine,
+                label = label,
+                tick = axisTick,
+                guideline = null,
+                valueFormatter = BarLabelFormatter
+            )
         ),
         modelProducer = modelProducer,
         modifier = modifier
     )
+}
+
+/** Renders Y-axis values as whole numbers (session/minute counts are integers — never decimals). */
+private val YIntFormatter = CartesianValueFormatter { _, value, _ -> value.roundToInt().toString() }
+
+/** A round integer Y-axis step (~4 labels) so values stay whole and well-spaced across data ranges. */
+private fun niceYStep(maxValue: Int): Double {
+    if (maxValue <= 4) return 1.0
+    val rough = maxValue / 4.0
+    val candidates = doubleArrayOf(1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0, 50.0, 100.0, 200.0, 500.0, 1000.0)
+    return candidates.firstOrNull { it >= rough } ?: maxValue.toDouble()
 }
 
 private fun ReportRange.labelRes(): Int = when (this) {

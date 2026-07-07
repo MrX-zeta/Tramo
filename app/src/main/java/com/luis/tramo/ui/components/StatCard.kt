@@ -70,4 +70,6 @@ fun StatCard(
     }
 }
 
-private val STAT_CARD_HEIGHT = 148.dp
+// Sized so the Report's lower block (KPI row + heatmap + monthly card) fits within one viewport,
+// letting the KPI cards stay fully visible at max scroll instead of being clipped by the app bar.
+private val STAT_CARD_HEIGHT = 144.dp
