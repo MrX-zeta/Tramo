@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luis.tramo.data.UserPreferencesRepository
+import com.luis.tramo.data.session.SessionRepository
+import com.luis.tramo.data.task.TaskEntity
+import com.luis.tramo.data.task.TaskRepository
 import com.luis.tramo.timer.PomodoroTimerService
 import com.luis.tramo.timer.SessionType
 import com.luis.tramo.timer.TimerState
@@ -17,14 +20,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
+
+data class TaskPreview(val emoji: String, val title: String)
 
 data class TimerUiState(
     val sessionType: SessionType = SessionType.FOCUS,
     val status: TimerStatus = TimerStatus.IDLE,
     val timeText: String = formatTime(SessionType.FOCUS.durationSeconds),
     val progress: Float = 0f,
-    val completedFocusToday: Int = 0
+    val completedFocusToday: Int = 0,
+    val streak: Int = 0,
+    val todaysTasks: List<TaskPreview> = emptyList()
 ) {
     val isRunning: Boolean get() = status == TimerStatus.RUNNING
 }
@@ -33,12 +41,23 @@ data class TimerUiState(
 class TimerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val stateHolder: TimerStateHolder,
-    preferences: UserPreferencesRepository
+    preferences: UserPreferencesRepository,
+    sessionRepository: SessionRepository,
+    taskRepository: TaskRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<TimerUiState> =
-        combine(stateHolder.state, preferences.sessionsToday) { timer, count ->
-            timer.toUiState(count)
+        combine(
+            stateHolder.state,
+            preferences.sessionsToday,
+            sessionRepository.focusDayStamps(),
+            taskRepository.activeTasks()
+        ) { timer, count, dayStamps, tasks ->
+            timer.toUiState(
+                count = count,
+                streak = computeStreak(dayStamps),
+                tasks = tasks.take(TASK_PREVIEW_LIMIT).map { it.toPreview() }
+            )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -76,11 +95,33 @@ class TimerViewModel @Inject constructor(
 
     private fun send(action: String) = PomodoroTimerService.sendAction(context, action)
 
-    private fun TimerState.toUiState(count: Int) = TimerUiState(
+    private fun TimerState.toUiState(count: Int, streak: Int, tasks: List<TaskPreview>) = TimerUiState(
         sessionType = sessionType,
         status = status,
         timeText = formatTime(remainingSeconds),
         progress = progress,
-        completedFocusToday = count
+        completedFocusToday = count,
+        streak = streak,
+        todaysTasks = tasks
     )
+
+    private fun TaskEntity.toPreview() = TaskPreview(emoji = iconEmoji, title = title)
+
+    /** Consecutive days (up to today, or yesterday if today is empty) with a focus session. */
+    private fun computeStreak(dayStamps: List<String>): Int {
+        val days = dayStamps.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
+        if (days.isEmpty()) return 0
+        val today = LocalDate.now()
+        var cursor = if (today in days) today else today.minusDays(1)
+        var streak = 0
+        while (cursor in days) {
+            streak++
+            cursor = cursor.minusDays(1)
+        }
+        return streak
+    }
+
+    private companion object {
+        const val TASK_PREVIEW_LIMIT = 3
+    }
 }
