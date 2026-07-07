@@ -4,17 +4,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,109 +52,92 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
                 text = stringResource(R.string.settings_title),
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
             )
 
-            // Custom timer durations with validation (Focus >= Break).
-            Text(
-                stringResource(R.string.settings_timer_section),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                DurationField(
-                    label = stringResource(R.string.settings_focus_minutes),
-                    value = state.focusInput,
-                    error = state.focusError,
-                    onValueChange = viewModel::onFocusChange,
-                    modifier = Modifier.weight(1f)
-                )
-                DurationField(
-                    label = stringResource(R.string.settings_break_minutes),
-                    value = state.breakInput,
-                    error = state.breakError,
-                    onValueChange = viewModel::onBreakChange,
-                    modifier = Modifier.weight(1f)
-                )
+            // --- Timer group ---
+            SettingsGroup(title = stringResource(R.string.settings_timer_section)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DurationField(
+                        label = stringResource(R.string.settings_focus_minutes),
+                        value = state.focusInput,
+                        error = state.focusError,
+                        onValueChange = viewModel::onFocusChange,
+                        modifier = Modifier.weight(1f)
+                    )
+                    DurationField(
+                        label = stringResource(R.string.settings_break_minutes),
+                        value = state.breakInput,
+                        error = state.breakError,
+                        onValueChange = viewModel::onBreakChange,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
-            HorizontalDivider()
-
-            // Dark mode override.
+            // --- Preferences group ---
             val systemDark = isSystemInDarkTheme()
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.settings_dark_mode), style = MaterialTheme.typography.titleMedium)
-                    if (state.darkOverride != null) {
-                        TextButton(
-                            onClick = { viewModel.setDarkOverride(null) },
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                        ) {
-                            Text(stringResource(R.string.settings_follow_system))
-                        }
+            SettingsGroup(title = stringResource(R.string.settings_section_general)) {
+                SettingRow(
+                    title = stringResource(R.string.settings_dark_mode),
+                    subtitle = if (state.darkOverride != null) {
+                        stringResource(R.string.settings_follow_system)
+                    } else null,
+                    onSubtitleClick = { viewModel.setDarkOverride(null) }
+                ) {
+                    AnimatedSwitch(
+                        checked = state.darkOverride ?: systemDark,
+                        onCheckedChange = { viewModel.setDarkOverride(it) }
+                    )
+                }
+
+                RowDivider()
+
+                SettingRow(title = stringResource(R.string.settings_daily_goal)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedIconButton(
+                            onClick = { viewModel.setDailyGoal(state.dailyGoal - 1) },
+                            modifier = Modifier.size(40.dp)
+                        ) { Text("–", style = MaterialTheme.typography.titleLarge) }
+                        Text(
+                            text = state.dailyGoal.toString(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        OutlinedIconButton(
+                            onClick = { viewModel.setDailyGoal(state.dailyGoal + 1) },
+                            modifier = Modifier.size(40.dp)
+                        ) { Text("+", style = MaterialTheme.typography.titleLarge) }
                     }
                 }
-                Switch(
-                    checked = state.darkOverride ?: systemDark,
-                    onCheckedChange = { viewModel.setDarkOverride(it) }
-                )
-            }
 
-            HorizontalDivider()
+                RowDivider()
 
-            // Daily goal stepper.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.settings_daily_goal),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                OutlinedIconButton(onClick = { viewModel.setDailyGoal(state.dailyGoal - 1) }) {
-                    Text("–", style = MaterialTheme.typography.titleLarge)
+                SettingRow(
+                    title = stringResource(R.string.settings_language),
+                    modifier = Modifier.clickable { showLanguageDialog = true }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = localeLabelFor(state.languageTag),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "  ›",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Text(
-                    text = state.dailyGoal.toString(),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                OutlinedIconButton(onClick = { viewModel.setDailyGoal(state.dailyGoal + 1) }) {
-                    Text("+", style = MaterialTheme.typography.titleLarge)
-                }
-            }
-
-            HorizontalDivider()
-
-            // Language row → modal.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showLanguageDialog = true }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    stringResource(R.string.settings_language),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = localeLabelFor(state.languageTag),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
@@ -163,6 +154,64 @@ fun SettingsScreen(
     }
 }
 
+/** A titled section rendered as an elevated card with pronounced rounded corners. */
+@Composable
+private fun SettingsGroup(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+        )
+        ElevatedCard(shape = RoundedCornerShape(16.dp)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                content = content
+            )
+        }
+    }
+}
+
+/** A single row: title (with optional tappable subtitle) on the left, trailing control on the right. */
+@Composable
+private fun SettingRow(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    onSubtitleClick: (() -> Unit)? = null,
+    trailing: @Composable () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (subtitle != null) {
+                TextButton(
+                    onClick = { onSubtitleClick?.invoke() },
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(subtitle, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+        trailing()
+    }
+}
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+}
+
 @Composable
 private fun DurationField(
     label: String,
@@ -171,18 +220,17 @@ private fun DurationField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label) },
-            singleLine = true,
-            isError = error != null,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            supportingText = error?.let { { Text(stringResource(errorTextFor(it))) } },
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        singleLine = true,
+        isError = error != null,
+        shape = RoundedCornerShape(12.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        supportingText = error?.let { { Text(stringResource(errorTextFor(it))) } },
+        modifier = modifier
+    )
 }
 
 private fun errorTextFor(error: FieldError): Int = when (error) {

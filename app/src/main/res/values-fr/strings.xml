@@ -29,6 +29,7 @@
 
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>
+    <string name="settings_section_general">Préférences</string>
     <string name="settings_timer_section">Durées du minuteur (minutes)</string>
     <string name="settings_focus_minutes">Concentration</string>
     <string name="settings_break_minutes">Pause</string>

@@ -29,6 +29,7 @@
 
     <!-- Settings -->
     <string name="settings_title">Configurações</string>
+    <string name="settings_section_general">Preferências</string>
     <string name="settings_timer_section">Durações do temporizador (minutos)</string>
     <string name="settings_focus_minutes">Foco</string>
     <string name="settings_break_minutes">Pausa</string>

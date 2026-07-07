@@ -29,6 +29,7 @@
 
     <!-- Settings -->
     <string name="settings_title">設定</string>
+    <string name="settings_section_general">環境設定</string>
     <string name="settings_timer_section">タイマーの長さ（分）</string>
     <string name="settings_focus_minutes">集中</string>
     <string name="settings_break_minutes">休憩</string>
