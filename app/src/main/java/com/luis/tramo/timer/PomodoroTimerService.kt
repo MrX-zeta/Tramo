@@ -103,10 +103,23 @@ class PomodoroTimerService : Service() {
         tickJob?.cancel()
         alarms.cancel()
         scope.launch {
-            val next = nextSessionType(stateHolder.state.value.sessionType, countFocusToday())
+            val before = preferences.sessionsBeforeLongBreak.first()
+            val next = nextSessionType(stateHolder.state.value.sessionType, countFocusToday(), before)
             stateHolder.set(freshSession(next))
             beginRunning()
         }
+    }
+
+    /** Stops running and leaves the next session ready in IDLE (used when auto-start is off). */
+    private fun goIdle() {
+        tickJob?.cancel()
+        alarms.cancel()
+        scope.launch {
+            preferences.clearActiveSession()
+            PomodoroWidget().updateAll(applicationContext)
+        }
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun stop() {
@@ -132,11 +145,21 @@ class PomodoroTimerService : Service() {
         alarms.cancel()
         scope.launch {
             val finished = stateHolder.state.value
-            sessions.record(finished.sessionType, finished.totalSeconds, System.currentTimeMillis())
-            postCompletionNotification(finished.sessionType)
-            val next = nextSessionType(finished.sessionType, countFocusToday())
+            val finishedType = finished.sessionType
+            sessions.record(finishedType, finished.totalSeconds, System.currentTimeMillis())
+            postCompletionNotification(finishedType, preferences.soundVibrationOnFinish.first())
+
+            val before = preferences.sessionsBeforeLongBreak.first()
+            val next = nextSessionType(finishedType, countFocusToday(), before)
             stateHolder.set(freshSession(next))
-            beginRunning() // auto-advance into the next session
+
+            // Honor the auto-start preferences for this transition.
+            val autoStart = if (finishedType == SessionType.FOCUS) {
+                preferences.autoStartBreaks.first()
+            } else {
+                preferences.autoStartNextFocus.first()
+            }
+            if (autoStart) beginRunning() else goIdle()
         }
     }
 
@@ -217,7 +240,7 @@ class PomodoroTimerService : Service() {
         val seconds = when (type) {
             SessionType.FOCUS -> preferences.focusPresetMinutes.first() * 60
             SessionType.SHORT_BREAK -> preferences.breakPresetMinutes.first() * 60
-            SessionType.LONG_BREAK -> type.durationSeconds
+            SessionType.LONG_BREAK -> preferences.longBreakMinutes.first() * 60
         }
         return TimerState(type, TimerStatus.IDLE, seconds, seconds)
     }
@@ -246,20 +269,23 @@ class PomodoroTimerService : Service() {
             .build()
     }
 
-    /** The end-of-cycle alert — the core onboarding promise. */
-    private fun postCompletionNotification(finished: SessionType) {
+    /** The end-of-cycle alert — the core onboarding promise. [sound] gates sound/vibration. */
+    private fun postCompletionNotification(finished: SessionType, sound: Boolean) {
         val contentIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL)
+        // A HIGH channel alerts (sound+vibration); the LOW channel shows the notice silently.
+        val channel = if (sound) ALERT_CHANNEL else ONGOING_CHANNEL
+        val notification = NotificationCompat.Builder(this, channel)
             .setContentTitle(getString(R.string.timer_completed_title))
             .setContentText(getString(finished.labelRes))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setSilent(!sound)
+            .setPriority(if (sound) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW)
             .build()
         notificationManager().notify(COMPLETION_NOTIFICATION_ID, notification)
     }
@@ -307,10 +333,10 @@ class PomodoroTimerService : Service() {
         private const val COMPLETION_NOTIFICATION_ID = 1002
         private const val TICK_INTERVAL_MS = 250L
 
-        /** After a break, back to focus; after focus, long break every [SESSIONS_PER_LONG_BREAK]. */
-        fun nextSessionType(current: SessionType, focusCount: Int): SessionType = when {
+        /** After a break, back to focus; after focus, a long break every [sessionsBeforeLong] sessions. */
+        fun nextSessionType(current: SessionType, focusCount: Int, sessionsBeforeLong: Int): SessionType = when {
             current != SessionType.FOCUS -> SessionType.FOCUS
-            focusCount % SESSIONS_PER_LONG_BREAK == 0 -> SessionType.LONG_BREAK
+            sessionsBeforeLong > 0 && focusCount % sessionsBeforeLong == 0 -> SessionType.LONG_BREAK
             else -> SessionType.SHORT_BREAK
         }
 
