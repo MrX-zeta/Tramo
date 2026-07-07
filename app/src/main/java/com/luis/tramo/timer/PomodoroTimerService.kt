@@ -9,16 +9,17 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.os.SystemClock
 import androidx.core.app.NotificationCompat
+import androidx.glance.appwidget.updateAll
 import com.luis.tramo.MainActivity
 import com.luis.tramo.R
+import com.luis.tramo.data.ActiveSession
 import com.luis.tramo.data.UserPreferencesRepository
 import com.luis.tramo.data.session.SessionRepository
 import com.luis.tramo.widget.PomodoroWidget
-import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -27,13 +28,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
-import kotlinx.coroutines.Dispatchers
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 /**
- * Foreground service that owns the countdown. It counts against an absolute
- * [SystemClock.elapsedRealtime] deadline so the remaining time stays accurate even while the
- * process is backgrounded or dozing, and pushes every tick to the notification and the widget.
+ * Foreground service that owns the countdown. Time is driven by an absolute wall-clock deadline
+ * ([endEpochMillis]) persisted to DataStore, so it never drifts in the background and the running
+ * session survives process death. An exact [TimerAlarmScheduler] alarm is the authoritative
+ * completion fire; the tick loop only updates the live display.
  */
 @AndroidEntryPoint
 class PomodoroTimerService : Service() {
@@ -42,77 +45,129 @@ class PomodoroTimerService : Service() {
     @Inject lateinit var preferences: UserPreferencesRepository
     @Inject lateinit var sessions: SessionRepository
 
-    private val scope = CoroutineScope(SupervisorJob()) + Dispatchers.Default
+    private val scope = CoroutineScope(SupervisorJob()) + Dispatchers.Main.immediate
+    private val alarms by lazy { TimerAlarmScheduler(applicationContext) }
     private var tickJob: Job? = null
-    private var deadlineElapsed = 0L
+    private var endEpochMillis = 0L
+
+    @Volatile private var completedForEnd = 0L
 
     override fun onCreate() {
         super.onCreate()
-        createChannel()
+        createChannels()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startOrResume()
+            ACTION_START -> beginRunning()
             ACTION_PAUSE -> pause()
             ACTION_SKIP -> skip()
             ACTION_STOP -> stop()
+            ACTION_COMPLETE -> handleComplete()
+            else -> restore() // null intent (START_STICKY restart) or ACTION_RESTORE
         }
         return START_STICKY
     }
 
-    private fun startOrResume() {
+    /** Starts (or resumes) the current session in the holder, using its remaining seconds. */
+    private fun beginRunning() {
         val state = stateHolder.state.value
         val remaining = if (state.remainingSeconds > 0) state.remainingSeconds else state.totalSeconds
-        deadlineElapsed = SystemClock.elapsedRealtime() + remaining * 1000L
+        endEpochMillis = System.currentTimeMillis() + remaining * 1000L
+        completedForEnd = 0L
         stateHolder.update { it.copy(status = TimerStatus.RUNNING, remainingSeconds = remaining) }
-        startForeground(NOTIFICATION_ID, buildNotification(stateHolder.state.value))
+        startForeground(NOTIFICATION_ID, buildOngoingNotification(stateHolder.state.value))
+        alarms.schedule(endEpochMillis)
+        persistRunning(state.sessionType, state.totalSeconds, endEpochMillis)
         startTicking()
     }
 
     private fun pause() {
         tickJob?.cancel()
-        stateHolder.update { it.copy(status = TimerStatus.PAUSED, remainingSeconds = currentRemaining()) }
-        refreshOutputs()
+        alarms.cancel()
+        val remaining = currentRemaining()
+        stateHolder.update { it.copy(status = TimerStatus.PAUSED, remainingSeconds = remaining) }
+        val state = stateHolder.state.value
+        scope.launch {
+            preferences.saveActiveSession(
+                ActiveSession(state.sessionType.name, state.totalSeconds, running = false, endEpochMillis = 0L, pausedRemaining = remaining)
+            )
+        }
+        notificationManager().notify(NOTIFICATION_ID, buildOngoingNotification(state))
+        pushWidget()
     }
 
     private fun skip() {
         tickJob?.cancel()
+        alarms.cancel()
         scope.launch {
-            val next = nextSessionType(stateHolder.state.value.sessionType, preferences.sessionsTodayValue())
+            val next = nextSessionType(stateHolder.state.value.sessionType, countFocusToday())
             stateHolder.set(freshSession(next))
-            startOrResume()
+            beginRunning()
         }
     }
 
     private fun stop() {
         tickJob?.cancel()
+        alarms.cancel()
         scope.launch {
+            preferences.clearActiveSession()
             stateHolder.set(freshSession(SessionType.FOCUS))
-            PomodoroWidget().updateAll(applicationContext)
+            pushWidget()
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
-    /**
-     * Builds a fresh session. Focus honors the user's current preset (applied at the next session
-     * start, never mid-session); breaks keep their fixed defaults.
-     */
-    private suspend fun freshSession(type: SessionType): TimerState {
-        val seconds = when (type) {
-            SessionType.FOCUS -> preferences.focusPresetMinutes.first() * 60
-            SessionType.SHORT_BREAK -> preferences.breakPresetMinutes.first() * 60
-            SessionType.LONG_BREAK -> type.durationSeconds
+    /** Idempotent completion, invoked by the tick loop or the alarm (whichever fires first). */
+    private fun handleComplete() {
+        val end = endEpochMillis
+        synchronized(this) {
+            if (end == 0L || end == completedForEnd) return
+            completedForEnd = end
         }
-        return TimerState(
-            sessionType = type,
-            status = TimerStatus.IDLE,
-            remainingSeconds = seconds,
-            totalSeconds = seconds
-        )
+        tickJob?.cancel()
+        alarms.cancel()
+        scope.launch {
+            val finished = stateHolder.state.value
+            sessions.record(finished.sessionType, finished.totalSeconds, System.currentTimeMillis())
+            postCompletionNotification(finished.sessionType)
+            val next = nextSessionType(finished.sessionType, countFocusToday())
+            stateHolder.set(freshSession(next))
+            beginRunning() // auto-advance into the next session
+        }
+    }
+
+    /** Restores state after process death from the persisted snapshot. */
+    private fun restore() {
+        scope.launch {
+            val active = preferences.getActiveSession()
+            if (active == null) {
+                stopSelf()
+                return@launch
+            }
+            val type = runCatching { SessionType.valueOf(active.sessionType) }.getOrNull() ?: SessionType.FOCUS
+            if (active.running) {
+                endEpochMillis = active.endEpochMillis
+                completedForEnd = 0L
+                if (active.endEpochMillis > System.currentTimeMillis()) {
+                    val remaining = currentRemaining()
+                    stateHolder.set(TimerState(type, TimerStatus.RUNNING, remaining, active.totalSeconds))
+                    startForeground(NOTIFICATION_ID, buildOngoingNotification(stateHolder.state.value))
+                    alarms.schedule(endEpochMillis)
+                    startTicking()
+                } else {
+                    // Completed while the process was dead.
+                    stateHolder.set(TimerState(type, TimerStatus.RUNNING, 0, active.totalSeconds))
+                    handleComplete()
+                }
+            } else {
+                stateHolder.set(TimerState(type, TimerStatus.PAUSED, active.pausedRemaining, active.totalSeconds))
+                stopSelf()
+            }
+        }
     }
 
     private fun startTicking() {
@@ -122,10 +177,11 @@ class PomodoroTimerService : Service() {
                 val remaining = currentRemaining()
                 if (remaining != stateHolder.state.value.remainingSeconds) {
                     stateHolder.update { it.copy(remainingSeconds = remaining) }
-                    refreshOutputs()
+                    notificationManager().notify(NOTIFICATION_ID, buildOngoingNotification(stateHolder.state.value))
+                    pushWidget()
                 }
                 if (remaining <= 0) {
-                    onSessionComplete()
+                    handleComplete()
                     break
                 }
                 delay(TICK_INTERVAL_MS)
@@ -133,34 +189,40 @@ class PomodoroTimerService : Service() {
         }
     }
 
-    private suspend fun onSessionComplete() {
-        val finishedState = stateHolder.state.value
-        val finished = finishedState.sessionType
-        // Record the completed session (its actual length, which may be a custom focus preset).
-        sessions.record(finished, finishedState.totalSeconds, System.currentTimeMillis())
-        val focusCount = if (finished == SessionType.FOCUS) {
-            preferences.incrementFocusSessions()
-        } else {
-            preferences.sessionsTodayValue()
-        }
-        val next = nextSessionType(finished, focusCount)
-        // Auto-advance: move to the next session and start it immediately.
-        stateHolder.set(freshSession(next))
-        startOrResume()
-    }
-
-    /** Ceil of the remaining millis, so the display shows the full starting minute. */
+    /** Ceil of the remaining wall-clock millis, so the display shows the full starting minute. */
     private fun currentRemaining(): Int {
-        val millis = deadlineElapsed - SystemClock.elapsedRealtime()
+        val millis = endEpochMillis - System.currentTimeMillis()
         return ((millis + 999) / 1000).toInt().coerceAtLeast(0)
     }
 
-    private fun refreshOutputs() {
-        notificationManager().notify(NOTIFICATION_ID, buildNotification(stateHolder.state.value))
+    private suspend fun countFocusToday(): Int {
+        val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return sessions.countFocusSince(todayStart)
+    }
+
+    private fun persistRunning(type: SessionType, totalSeconds: Int, end: Long) {
+        scope.launch {
+            preferences.saveActiveSession(
+                ActiveSession(type.name, totalSeconds, running = true, endEpochMillis = end, pausedRemaining = 0)
+            )
+        }
+    }
+
+    private fun pushWidget() {
         scope.launch { PomodoroWidget().updateAll(applicationContext) }
     }
 
-    private fun buildNotification(state: TimerState): Notification {
+    /** Focus honors the current preset; the short break honors its preset; long break is fixed. */
+    private suspend fun freshSession(type: SessionType): TimerState {
+        val seconds = when (type) {
+            SessionType.FOCUS -> preferences.focusPresetMinutes.first() * 60
+            SessionType.SHORT_BREAK -> preferences.breakPresetMinutes.first() * 60
+            SessionType.LONG_BREAK -> type.durationSeconds
+        }
+        return TimerState(type, TimerStatus.IDLE, seconds, seconds)
+    }
+
+    private fun buildOngoingNotification(state: TimerState): Notification {
         val contentIntent = PendingIntent.getActivity(
             this, 0,
             Intent(this, MainActivity::class.java),
@@ -171,7 +233,7 @@ class PomodoroTimerService : Service() {
         } else {
             getString(R.string.timer_play) to ACTION_START
         }
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        return NotificationCompat.Builder(this, ONGOING_CHANNEL)
             .setContentTitle(getString(state.sessionType.labelRes))
             .setContentText(formatTime(state.remainingSeconds))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
@@ -184,6 +246,24 @@ class PomodoroTimerService : Service() {
             .build()
     }
 
+    /** The end-of-cycle alert — the core onboarding promise. */
+    private fun postCompletionNotification(finished: SessionType) {
+        val contentIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL)
+            .setContentTitle(getString(R.string.timer_completed_title))
+            .setContentText(getString(finished.labelRes))
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(contentIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        notificationManager().notify(COMPLETION_NOTIFICATION_ID, notification)
+    }
+
     private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent {
         val intent = Intent(this, PomodoroTimerService::class.java).setAction(action)
         return PendingIntent.getService(
@@ -192,13 +272,15 @@ class PomodoroTimerService : Service() {
         )
     }
 
-    private fun createChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.timer_channel_name),
-            NotificationManager.IMPORTANCE_LOW
-        ).apply { setShowBadge(false) }
-        notificationManager().createNotificationChannel(channel)
+    private fun createChannels() {
+        val manager = notificationManager()
+        manager.createNotificationChannel(
+            NotificationChannel(ONGOING_CHANNEL, getString(R.string.timer_channel_name), NotificationManager.IMPORTANCE_LOW)
+                .apply { setShowBadge(false) }
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(ALERT_CHANNEL, getString(R.string.timer_alert_channel_name), NotificationManager.IMPORTANCE_HIGH)
+        )
     }
 
     private fun notificationManager() =
@@ -207,6 +289,7 @@ class PomodoroTimerService : Service() {
     override fun onDestroy() {
         tickJob?.cancel()
         scope.cancel()
+        // Note: the alarm is intentionally NOT cancelled here — it must still fire if we were killed.
         super.onDestroy()
     }
 
@@ -215,10 +298,14 @@ class PomodoroTimerService : Service() {
         const val ACTION_PAUSE = "com.luis.tramo.timer.PAUSE"
         const val ACTION_SKIP = "com.luis.tramo.timer.SKIP"
         const val ACTION_STOP = "com.luis.tramo.timer.STOP"
+        const val ACTION_COMPLETE = "com.luis.tramo.timer.COMPLETE"
+        const val ACTION_RESTORE = "com.luis.tramo.timer.RESTORE"
 
-        private const val CHANNEL_ID = "pomodoro_timer"
+        private const val ONGOING_CHANNEL = "pomodoro_timer"
+        private const val ALERT_CHANNEL = "pomodoro_timer_alerts"
         private const val NOTIFICATION_ID = 1001
-        private const val TICK_INTERVAL_MS = 200L
+        private const val COMPLETION_NOTIFICATION_ID = 1002
+        private const val TICK_INTERVAL_MS = 250L
 
         /** After a break, back to focus; after focus, long break every [SESSIONS_PER_LONG_BREAK]. */
         fun nextSessionType(current: SessionType, focusCount: Int): SessionType = when {
@@ -227,14 +314,20 @@ class PomodoroTimerService : Service() {
             else -> SessionType.SHORT_BREAK
         }
 
-        /** Launches the service with [action]; uses a foreground start only when beginning to run. */
+        /** START/COMPLETE promote to foreground; other actions are plain (sent while app-visible). */
         fun sendAction(context: Context, action: String) {
             val intent = Intent(context, PomodoroTimerService::class.java).setAction(action)
-            if (action == ACTION_START && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val foreground = action == ACTION_START || action == ACTION_COMPLETE
+            if (foreground && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
                 context.startService(intent)
             }
+        }
+
+        /** Ask the service to restore any persisted session (called from the UI on cold start). */
+        fun requestRestore(context: Context) {
+            context.startService(Intent(context, PomodoroTimerService::class.java).setAction(ACTION_RESTORE))
         }
     }
 }
