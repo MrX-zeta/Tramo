@@ -37,7 +37,9 @@ data class HeatmapCell(val date: LocalDate, val count: Int, val level: Int)
 data class HeatmapUiState(
     val cells: List<HeatmapCell> = emptyList(),
     val totalCompletions: Int = 0,
-    val activeDays: Int = 0
+    val activeDays: Int = 0,
+    /** X-axis: 3-letter month abbreviation at each of the 12 week-columns' month boundaries. */
+    val columnLabels: List<String> = emptyList()
 )
 
 /** Today's focus summary (card 1). */
@@ -97,7 +99,8 @@ class ReportViewModel @Inject constructor(
                 dailyLabels = buildDailyLabels(days)
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportUiState())
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportUiState())
 
     // 12-week window starting on the Monday 11 weeks before the current week.
     private val heatmapStartMonday: LocalDate =
@@ -108,7 +111,12 @@ class ReportViewModel @Inject constructor(
         repository.totalFocusCount(),
         repository.focusDayStamps()
     ) { dayCounts, total, stamps ->
-        HeatmapUiState(cells = buildCells(dayCounts), totalCompletions = total, activeDays = stamps.size)
+        HeatmapUiState(
+            cells = buildCells(dayCounts),
+            totalCompletions = total,
+            activeDays = stamps.size,
+            columnLabels = buildHeatmapColumnLabels()
+        )
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HeatmapUiState())
 
@@ -146,10 +154,14 @@ class ReportViewModel @Inject constructor(
         for (i in 11 downTo 0) {
             val ym = thisMonth.minusMonths(i.toLong())
             counts.add(countByMonth[ym.format(keyFormat)] ?: 0)
-            labels.add(ym.month.getDisplayName(TextStyle.SHORT, locale))
+            labels.add(monthShort(ym.month, locale))
         }
         return MonthlyUiState(counts, labels)
     }
+
+    /** 3-letter localized month abbreviation without a trailing period (e.g. "abr", "jul"). */
+    private fun monthShort(month: java.time.Month, locale: Locale): String =
+        month.getDisplayName(TextStyle.SHORT, locale).removeSuffix(".")
 
     /** Builds the 84 cells ordered weekday-major so a 12-column grid renders 7 rows × 12 weeks. */
     private fun buildCells(dayCounts: List<DayCount>): List<HeatmapCell> {
@@ -167,15 +179,15 @@ class ReportViewModel @Inject constructor(
         return cells
     }
 
-    /** Month label for each of the 12 heatmap week-columns (shown where the month changes). */
-    fun heatmapColumnLabels(): List<String> {
+    /** 3-letter month abbreviation for each of the 12 heatmap week-columns, at month boundaries only. */
+    private fun buildHeatmapColumnLabels(): List<String> {
         val locale = Locale.getDefault()
         var lastMonth = -1
         return (0 until WEEKS).map { week ->
-            val monthValue = heatmapStartMonday.plusWeeks(week.toLong()).monthValue
-            if (monthValue != lastMonth) {
-                lastMonth = monthValue
-                heatmapStartMonday.plusWeeks(week.toLong()).month.getDisplayName(TextStyle.NARROW, locale)
+            val date = heatmapStartMonday.plusWeeks(week.toLong())
+            if (date.monthValue != lastMonth) {
+                lastMonth = date.monthValue
+                monthShort(date.month, locale)
             } else {
                 ""
             }
