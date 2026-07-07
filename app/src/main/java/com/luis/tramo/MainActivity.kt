@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -17,10 +18,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TramoTheme {
-                val mainViewModel: MainViewModel = viewModel()
-                val startDestination by mainViewModel.startDestination.collectAsStateWithLifecycle()
+            val mainViewModel: MainViewModel = viewModel()
+            val startDestination by mainViewModel.startDestination.collectAsStateWithLifecycle()
+            val darkOverride by mainViewModel.darkModeOverride.collectAsStateWithLifecycle()
 
+            TramoTheme(darkTheme = darkOverride ?: isSystemInDarkTheme()) {
                 // Wait until the onboarded flag is read to avoid a wrong-screen flash.
                 startDestination?.let { destination ->
                     TramoNavHost(startDestination = destination)

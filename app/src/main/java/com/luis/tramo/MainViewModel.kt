@@ -26,4 +26,12 @@ class MainViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = null
         )
+
+    /** Explicit dark-mode override; null means follow the system setting. */
+    val darkModeOverride: StateFlow<Boolean?> = preferencesRepository.darkModeOverride
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
 }
