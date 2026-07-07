@@ -12,13 +12,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -32,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -65,20 +65,29 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.headlineSmall
             )
 
-            // Timer preset.
-            SettingSection(title = stringResource(R.string.settings_focus_preset)) {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    val presets = SettingsViewModel.FOCUS_PRESETS
-                    presets.forEachIndexed { index, minutes ->
-                        SegmentedButton(
-                            selected = state.focusPreset == minutes,
-                            onClick = { viewModel.setFocusPreset(minutes) },
-                            shape = SegmentedButtonDefaults.itemShape(index, presets.size)
-                        ) {
-                            Text(stringResource(R.string.settings_minutes, minutes))
-                        }
-                    }
-                }
+            // Custom timer durations with validation (Focus >= Break).
+            Text(
+                stringResource(R.string.settings_timer_section),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DurationField(
+                    label = stringResource(R.string.settings_focus_minutes),
+                    value = state.focusInput,
+                    error = state.focusError,
+                    onValueChange = viewModel::onFocusChange,
+                    modifier = Modifier.weight(1f)
+                )
+                DurationField(
+                    label = stringResource(R.string.settings_break_minutes),
+                    value = state.breakInput,
+                    error = state.breakError,
+                    onValueChange = viewModel::onBreakChange,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             HorizontalDivider()
@@ -168,12 +177,30 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingSection(title: String, content: @Composable () -> Unit) {
-    Column {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.width(8.dp))
-        content()
+private fun DurationField(
+    label: String,
+    value: String,
+    error: FieldError?,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            singleLine = true,
+            isError = error != null,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            supportingText = error?.let { { Text(stringResource(errorTextFor(it))) } },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
+}
+
+private fun errorTextFor(error: FieldError): Int = when (error) {
+    FieldError.INVALID_NUMBER -> R.string.settings_error_invalid_number
+    FieldError.FOCUS_BELOW_BREAK -> R.string.settings_error_focus_below_break
 }
 
 @Composable
