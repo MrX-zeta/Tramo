@@ -6,7 +6,9 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -19,6 +21,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import com.luis.tramo.R
 
 /** The three bottom-navigation destinations. Settings is intentionally NOT here — it's a top-bar action. */
@@ -37,8 +40,13 @@ fun TramoBottomBar(
     currentRoute: String?,
     onSelect: (TopLevelDestination) -> Unit
 ) {
-    NavigationBar {
-        TopLevelDestination.entries.forEach { destination ->
+    Column {
+        HorizontalDivider(
+            thickness = Dp.Hairline,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
+        NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+            TopLevelDestination.entries.forEach { destination ->
             NavigationBarItem(
                 selected = currentRoute == destination.route,
                 onClick = { onSelect(destination) },
@@ -50,6 +58,7 @@ fun TramoBottomBar(
                     selectedTextColor = MaterialTheme.colorScheme.primary
                 )
             )
+            }
         }
     }
 }
