@@ -20,6 +20,19 @@ import javax.inject.Inject
 
 enum class TaskFilter { ACTIVE, COMPLETED }
 
+/** All fields collected by the task-creation bottom sheet. */
+data class NewTaskInput(
+    val title: String,
+    val iconEmoji: String,
+    val category: TaskCategory,
+    val priority: TaskPriority,
+    val colorArgb: Long,
+    val tags: List<String>,
+    val subtasks: List<Subtask>,
+    val isRecurring: Boolean,
+    val recurringDays: List<Int>
+)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
@@ -45,13 +58,7 @@ class TaskListViewModel @Inject constructor(
         _filter.value = filter
     }
 
-    fun addTask(
-        title: String,
-        category: TaskCategory,
-        priority: TaskPriority,
-        tags: List<String>,
-        subtasks: List<Subtask>
-    ) {
+    fun addTask(input: NewTaskInput) {
         viewModelScope.launch {
             // TODO: gate by real Pro entitlement once billing exists.
             if (repository.count() >= FREE_TASK_LIMIT) {
@@ -60,11 +67,15 @@ class TaskListViewModel @Inject constructor(
             }
             repository.add(
                 TaskEntity(
-                    title = title.trim(),
-                    category = category,
-                    priority = priority,
-                    tags = tags,
-                    subtasks = subtasks,
+                    title = input.title.trim(),
+                    category = input.category,
+                    priority = input.priority,
+                    tags = input.tags,
+                    subtasks = input.subtasks,
+                    iconEmoji = input.iconEmoji,
+                    colorArgb = input.colorArgb,
+                    isRecurring = input.isRecurring,
+                    recurringDays = input.recurringDays,
                     createdAt = System.currentTimeMillis()
                 )
             )
