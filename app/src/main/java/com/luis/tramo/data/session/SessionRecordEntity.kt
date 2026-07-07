@@ -17,3 +17,9 @@ data class HourlyFocus(
     val hour: Int,
     val totalSeconds: Int
 )
+
+/** Focus session count for a single local calendar day (yyyy-MM-dd), for the heatmap. */
+data class DayCount(
+    val day: String,
+    val count: Int
+)
