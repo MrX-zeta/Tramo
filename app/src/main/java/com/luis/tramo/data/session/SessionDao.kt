@@ -33,6 +33,22 @@ interface SessionDao {
     @Query("SELECT COUNT(*) FROM session_records WHERE type = 'FOCUS' AND completedAt >= :startMillis")
     fun focusCountSince(startMillis: Long): Flow<Int>
 
+    /** One-shot focus count since [startMillis] (used by the service for the long-break cadence). */
+    @Query("SELECT COUNT(*) FROM session_records WHERE type = 'FOCUS' AND completedAt >= :startMillis")
+    suspend fun countFocusSince(startMillis: Long): Int
+
+    /** Focus seconds per local day since [startMillis], for the per-day report chart. */
+    @Query(
+        """
+        SELECT date(completedAt / 1000, 'unixepoch', 'localtime') AS day,
+               COALESCE(SUM(durationSeconds), 0) AS totalSeconds
+        FROM session_records
+        WHERE type = 'FOCUS' AND completedAt >= :startMillis
+        GROUP BY day
+        """
+    )
+    fun focusMinutesByDay(startMillis: Long): Flow<List<DailyFocus>>
+
     /** Distinct local calendar days (yyyy-MM-dd) that have at least one focus session. */
     @Query(
         """

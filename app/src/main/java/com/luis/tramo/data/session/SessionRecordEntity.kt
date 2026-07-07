@@ -23,3 +23,9 @@ data class DayCount(
     val day: String,
     val count: Int
 )
+
+/** Focus seconds summed for a single local calendar day, for the per-day report chart. */
+data class DailyFocus(
+    val day: String,
+    val totalSeconds: Int
+)
