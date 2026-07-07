@@ -23,6 +23,9 @@
     <string name="timer_open_tasks">Mes tâches</string>
     <string name="timer_open_report">Rapport</string>
     <string name="timer_open_settings">Paramètres</string>
+    <string name="timer_streak">Série de %1$d jours</string>
+    <string name="timer_todays_tasks">Tâches du jour</string>
+    <string name="timer_no_tasks">Aucune tâche</string>
 
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>

@@ -23,6 +23,9 @@
     <string name="timer_open_tasks">マイタスク</string>
     <string name="timer_open_report">レポート</string>
     <string name="timer_open_settings">設定</string>
+    <string name="timer_streak">%1$d 日連続</string>
+    <string name="timer_todays_tasks">今日のタスク</string>
+    <string name="timer_no_tasks">タスクなし</string>
 
     <!-- Settings -->
     <string name="settings_title">設定</string>
