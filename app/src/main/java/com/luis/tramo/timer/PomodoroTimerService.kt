@@ -23,6 +23,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
@@ -81,17 +82,34 @@ class PomodoroTimerService : Service() {
         tickJob?.cancel()
         scope.launch {
             val next = nextSessionType(stateHolder.state.value.sessionType, preferences.sessionsTodayValue())
-            stateHolder.set(TimerState.forSession(next))
+            stateHolder.set(freshSession(next))
             startOrResume()
         }
     }
 
     private fun stop() {
         tickJob?.cancel()
-        stateHolder.set(TimerState.forSession(SessionType.FOCUS))
-        scope.launch { PomodoroWidget().updateAll(applicationContext) }
+        scope.launch {
+            stateHolder.set(freshSession(SessionType.FOCUS))
+            PomodoroWidget().updateAll(applicationContext)
+        }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    /**
+     * Builds a fresh session. Focus honors the user's current preset (applied at the next session
+     * start, never mid-session); breaks keep their fixed defaults.
+     */
+    private suspend fun freshSession(type: SessionType): TimerState {
+        if (type != SessionType.FOCUS) return TimerState.forSession(type)
+        val seconds = preferences.focusPresetMinutes.first() * 60
+        return TimerState(
+            sessionType = SessionType.FOCUS,
+            status = TimerStatus.IDLE,
+            remainingSeconds = seconds,
+            totalSeconds = seconds
+        )
     }
 
     private fun startTicking() {
@@ -113,9 +131,10 @@ class PomodoroTimerService : Service() {
     }
 
     private suspend fun onSessionComplete() {
-        val finished = stateHolder.state.value.sessionType
-        // Record the completed session for the daily/weekly/monthly report.
-        sessions.record(finished, finished.durationSeconds, System.currentTimeMillis())
+        val finishedState = stateHolder.state.value
+        val finished = finishedState.sessionType
+        // Record the completed session (its actual length, which may be a custom focus preset).
+        sessions.record(finished, finishedState.totalSeconds, System.currentTimeMillis())
         val focusCount = if (finished == SessionType.FOCUS) {
             preferences.incrementFocusSessions()
         } else {
@@ -123,7 +142,7 @@ class PomodoroTimerService : Service() {
         }
         val next = nextSessionType(finished, focusCount)
         // Auto-advance: move to the next session and start it immediately.
-        stateHolder.set(TimerState.forSession(next))
+        stateHolder.set(freshSession(next))
         startOrResume()
     }
 

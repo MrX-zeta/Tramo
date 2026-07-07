@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class TimerUiState(
@@ -31,7 +32,7 @@ data class TimerUiState(
 @HiltViewModel
 class TimerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    stateHolder: TimerStateHolder,
+    private val stateHolder: TimerStateHolder,
     preferences: UserPreferencesRepository
 ) : ViewModel() {
 
@@ -43,6 +44,26 @@ class TimerViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = TimerUiState()
         )
+
+    init {
+        // While idle on a focus session, reflect the current preset so a change made in Settings
+        // is visible immediately (the running session is never altered mid-way).
+        viewModelScope.launch {
+            preferences.focusPresetMinutes.collect { minutes ->
+                val current = stateHolder.state.value
+                val seconds = minutes * 60
+                if (current.status == TimerStatus.IDLE &&
+                    current.sessionType == SessionType.FOCUS &&
+                    current.totalSeconds != seconds
+                ) {
+                    stateHolder.set(
+                        TimerState.forSession(SessionType.FOCUS)
+                            .copy(remainingSeconds = seconds, totalSeconds = seconds)
+                    )
+                }
+            }
+        }
+    }
 
     fun onPlayPause() {
         val running = uiState.value.status == TimerStatus.RUNNING
