@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.WeekFields
+import java.util.Locale
 import javax.inject.Inject
 
 data class TaskPreview(val emoji: String, val title: String)
@@ -34,6 +37,8 @@ data class TimerUiState(
     val completedFocusToday: Int = 0,
     val streak: Int = 0,
     val todaysTasks: List<TaskPreview> = emptyList(),
+    /** 7 flags for the current week (locale order) — true where a focus session was completed. */
+    val weekDots: List<Boolean> = List(7) { false },
     /** True only when the "keep screen on" preference is enabled AND a session is running. */
     val keepScreenOn: Boolean = false
 ) {
@@ -65,6 +70,7 @@ class TimerViewModel @Inject constructor(
                 count = count,
                 streak = computeStreak(dayStamps),
                 tasks = tasks.take(TASK_PREVIEW_LIMIT).map { it.toPreview() },
+                weekDots = computeWeekDots(dayStamps),
                 keepScreenOn = keepScreenOn && timer.status == TimerStatus.RUNNING
             )
         }.stateIn(
@@ -120,7 +126,13 @@ class TimerViewModel @Inject constructor(
 
     private fun send(action: String) = PomodoroTimerService.sendAction(context, action)
 
-    private fun TimerState.toUiState(count: Int, streak: Int, tasks: List<TaskPreview>, keepScreenOn: Boolean) = TimerUiState(
+    private fun TimerState.toUiState(
+        count: Int,
+        streak: Int,
+        tasks: List<TaskPreview>,
+        weekDots: List<Boolean>,
+        keepScreenOn: Boolean
+    ) = TimerUiState(
         sessionType = sessionType,
         status = status,
         timeText = formatTime(remainingSeconds),
@@ -128,8 +140,17 @@ class TimerViewModel @Inject constructor(
         completedFocusToday = count,
         streak = streak,
         todaysTasks = tasks,
+        weekDots = weekDots,
         keepScreenOn = keepScreenOn
     )
+
+    /** Which of the current week's 7 days (locale first-day order) have a completed focus session. */
+    private fun computeWeekDots(dayStamps: List<String>): List<Boolean> {
+        val days = dayStamps.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
+        val firstDayOfWeek = WeekFields.of(Locale.getDefault()).firstDayOfWeek
+        val weekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(firstDayOfWeek))
+        return (0L until 7L).map { weekStart.plusDays(it) in days }
+    }
 
     private fun TaskEntity.toPreview() = TaskPreview(emoji = iconEmoji, title = title)
 
