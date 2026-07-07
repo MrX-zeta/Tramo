@@ -1,0 +1,80 @@
+<resources>
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Saltar</string>
+    <string name="onboarding_next">Siguiente</string>
+    <string name="onboarding_get_started">Empezar</string>
+    <string name="onboarding_title_1">Concéntrate, un bloque a la vez</string>
+    <string name="onboarding_subtitle_1">Trabaja en sprints de 25 minutos diseñados para mantener tu atención aguda y tu mente fresca.</string>
+    <string name="onboarding_title_2">El descanso es parte del trabajo</string>
+    <string name="onboarding_subtitle_2">Las pausas cortas entre sesiones te recargan, para que termines el día con energía, no agotado.</string>
+    <string name="onboarding_title_3">Observa crecer tu progreso</string>
+    <string name="onboarding_subtitle_3">Cada bloque completado genera impulso. Mira tus rachas y mantente motivado con el tiempo.</string>
+
+    <!-- Timer -->
+    <string name="session_focus">Concentración</string>
+    <string name="session_short_break">Descanso corto</string>
+    <string name="session_long_break">Descanso largo</string>
+    <string name="timer_play">Iniciar</string>
+    <string name="timer_pause">Pausar</string>
+    <string name="timer_skip">Saltar</string>
+    <string name="timer_stop">Detener</string>
+    <string name="timer_sessions_today">%1$d sesiones de concentración hoy</string>
+    <string name="timer_channel_name">Temporizador Pomodoro</string>
+    <string name="timer_open_tasks">Mis tareas</string>
+    <string name="timer_open_report">Informe</string>
+    <string name="timer_open_settings">Ajustes</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_timer_section">Duración del temporizador (minutos)</string>
+    <string name="settings_focus_minutes">Concentración</string>
+    <string name="settings_break_minutes">Descanso</string>
+    <string name="settings_error_invalid_number">Introduce un número mayor que 0</string>
+    <string name="settings_error_focus_below_break">La concentración debe ser ≥ el descanso</string>
+    <string name="settings_dark_mode">Modo oscuro</string>
+    <string name="settings_follow_system">Seguir el sistema</string>
+    <string name="settings_daily_goal">Meta diaria</string>
+    <string name="settings_language">Idioma</string>
+    <string name="settings_close">Cerrar</string>
+    <string name="settings_language_system">Predeterminado del sistema</string>
+
+    <!-- Report -->
+    <string name="report_title">Informe diario</string>
+    <string name="report_focus_time">Tiempo de concentración</string>
+    <string name="report_break_time">Tiempo de descanso</string>
+    <string name="report_avg_session">Sesión promedio</string>
+    <string name="report_session_count">Sesiones</string>
+    <string name="report_range_weekly">Semanal</string>
+    <string name="report_range_monthly">Mensual</string>
+    <string name="report_chart_title">Intensidad de concentración por hora (minutos)</string>
+
+    <!-- Tasks -->
+    <string name="task_add">Añadir tarea</string>
+    <string name="task_add_confirm">Añadir</string>
+    <string name="task_add_cancel">Cancelar</string>
+    <string name="task_empty">Aún no hay tareas. Toca + para añadir una.</string>
+    <string name="task_filter_active">Activas</string>
+    <string name="task_filter_completed">Completadas</string>
+    <string name="task_title_label">Título</string>
+    <string name="task_category_label">Categoría</string>
+    <string name="task_priority_label">Prioridad</string>
+    <string name="task_tags_label">Etiquetas (separadas por comas)</string>
+    <string name="task_subtasks_label">Subtareas (separadas por comas)</string>
+    <string name="task_subtask_progress">%1$d / %2$d subtareas</string>
+
+    <string name="category_work">Trabajo</string>
+    <string name="category_study">Estudio</string>
+    <string name="category_personal">Personal</string>
+    <string name="category_health">Salud</string>
+    <string name="priority_low">Baja</string>
+    <string name="priority_medium">Media</string>
+    <string name="priority_high">Alta</string>
+
+    <string name="upsell_title">Hazte Pro</string>
+    <string name="upsell_message">El plan gratuito está limitado a %1$d tareas. Mejora a Pro para tareas ilimitadas.</string>
+    <string name="upsell_confirm">Mejorar</string>
+    <string name="upsell_dismiss">Quizás luego</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Muestra tu temporizador Pomodoro en curso</string>
+</resources>

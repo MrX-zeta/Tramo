@@ -1,0 +1,80 @@
+<resources>
+    <!-- Onboarding -->
+    <string name="onboarding_skip">Überspringen</string>
+    <string name="onboarding_next">Weiter</string>
+    <string name="onboarding_get_started">Loslegen</string>
+    <string name="onboarding_title_1">Konzentriere dich, Block für Block</string>
+    <string name="onboarding_subtitle_1">Arbeite in 25-minütigen Sprints, die deine Aufmerksamkeit scharf und deinen Kopf frisch halten.</string>
+    <string name="onboarding_title_2">Ruhe gehört zur Arbeit</string>
+    <string name="onboarding_subtitle_2">Kurze Pausen zwischen den Sitzungen laden dich auf, damit du den Tag energiegeladen beendest, nicht erschöpft.</string>
+    <string name="onboarding_title_3">Sieh deinen Fortschritt wachsen</string>
+    <string name="onboarding_subtitle_3">Jeder abgeschlossene Block schafft Schwung. Verfolge deine Serien und bleib langfristig motiviert.</string>
+
+    <!-- Timer -->
+    <string name="session_focus">Fokus</string>
+    <string name="session_short_break">Kurze Pause</string>
+    <string name="session_long_break">Lange Pause</string>
+    <string name="timer_play">Starten</string>
+    <string name="timer_pause">Pause</string>
+    <string name="timer_skip">Überspringen</string>
+    <string name="timer_stop">Stopp</string>
+    <string name="timer_sessions_today">%1$d Fokus-Sitzungen heute</string>
+    <string name="timer_channel_name">Pomodoro-Timer</string>
+    <string name="timer_open_tasks">Meine Aufgaben</string>
+    <string name="timer_open_report">Bericht</string>
+    <string name="timer_open_settings">Einstellungen</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_timer_section">Timer-Dauer (Minuten)</string>
+    <string name="settings_focus_minutes">Fokus</string>
+    <string name="settings_break_minutes">Pause</string>
+    <string name="settings_error_invalid_number">Gib eine Zahl größer als 0 ein</string>
+    <string name="settings_error_focus_below_break">Fokus muss ≥ Pause sein</string>
+    <string name="settings_dark_mode">Dunkelmodus</string>
+    <string name="settings_follow_system">System folgen</string>
+    <string name="settings_daily_goal">Tagesziel</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_close">Schließen</string>
+    <string name="settings_language_system">Systemstandard</string>
+
+    <!-- Report -->
+    <string name="report_title">Tagesbericht</string>
+    <string name="report_focus_time">Fokuszeit</string>
+    <string name="report_break_time">Pausenzeit</string>
+    <string name="report_avg_session">Ø Sitzung</string>
+    <string name="report_session_count">Sitzungen</string>
+    <string name="report_range_weekly">Wöchentlich</string>
+    <string name="report_range_monthly">Monatlich</string>
+    <string name="report_chart_title">Fokusintensität nach Stunde (Minuten)</string>
+
+    <!-- Tasks -->
+    <string name="task_add">Aufgabe hinzufügen</string>
+    <string name="task_add_confirm">Hinzufügen</string>
+    <string name="task_add_cancel">Abbrechen</string>
+    <string name="task_empty">Noch keine Aufgaben. Tippe auf +, um eine hinzuzufügen.</string>
+    <string name="task_filter_active">Aktiv</string>
+    <string name="task_filter_completed">Erledigt</string>
+    <string name="task_title_label">Titel</string>
+    <string name="task_category_label">Kategorie</string>
+    <string name="task_priority_label">Priorität</string>
+    <string name="task_tags_label">Tags (durch Kommas getrennt)</string>
+    <string name="task_subtasks_label">Teilaufgaben (durch Kommas getrennt)</string>
+    <string name="task_subtask_progress">%1$d / %2$d Teilaufgaben</string>
+
+    <string name="category_work">Arbeit</string>
+    <string name="category_study">Studium</string>
+    <string name="category_personal">Persönlich</string>
+    <string name="category_health">Gesundheit</string>
+    <string name="priority_low">Niedrig</string>
+    <string name="priority_medium">Mittel</string>
+    <string name="priority_high">Hoch</string>
+
+    <string name="upsell_title">Pro werden</string>
+    <string name="upsell_message">Der kostenlose Plan ist auf %1$d Aufgaben begrenzt. Upgrade auf Pro für unbegrenzte Aufgaben.</string>
+    <string name="upsell_confirm">Upgrade</string>
+    <string name="upsell_dismiss">Vielleicht später</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Zeigt deinen laufenden Pomodoro-Timer</string>
+</resources>

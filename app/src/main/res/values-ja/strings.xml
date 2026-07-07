@@ -1,0 +1,80 @@
+<resources>
+    <!-- Onboarding -->
+    <string name="onboarding_skip">スキップ</string>
+    <string name="onboarding_next">次へ</string>
+    <string name="onboarding_get_started">はじめる</string>
+    <string name="onboarding_title_1">一つのブロックに集中</string>
+    <string name="onboarding_subtitle_1">25分のスプリントで作業し、集中力を保ち、頭をすっきりさせます。</string>
+    <string name="onboarding_title_2">休息も仕事のうち</string>
+    <string name="onboarding_subtitle_2">セッションの合間の短い休憩で回復し、疲れ切らずにエネルギッシュに一日を終えられます。</string>
+    <string name="onboarding_title_3">進捗の成長を見守る</string>
+    <string name="onboarding_subtitle_3">完了したブロックごとに勢いが増します。連続記録を確認して、長くモチベーションを保ちましょう。</string>
+
+    <!-- Timer -->
+    <string name="session_focus">集中</string>
+    <string name="session_short_break">短い休憩</string>
+    <string name="session_long_break">長い休憩</string>
+    <string name="timer_play">開始</string>
+    <string name="timer_pause">一時停止</string>
+    <string name="timer_skip">スキップ</string>
+    <string name="timer_stop">停止</string>
+    <string name="timer_sessions_today">本日 %1$d 回の集中セッション</string>
+    <string name="timer_channel_name">ポモドーロタイマー</string>
+    <string name="timer_open_tasks">マイタスク</string>
+    <string name="timer_open_report">レポート</string>
+    <string name="timer_open_settings">設定</string>
+
+    <!-- Settings -->
+    <string name="settings_title">設定</string>
+    <string name="settings_timer_section">タイマーの長さ（分）</string>
+    <string name="settings_focus_minutes">集中</string>
+    <string name="settings_break_minutes">休憩</string>
+    <string name="settings_error_invalid_number">0 より大きい数字を入力してください</string>
+    <string name="settings_error_focus_below_break">集中は休憩以上である必要があります</string>
+    <string name="settings_dark_mode">ダークモード</string>
+    <string name="settings_follow_system">システムに従う</string>
+    <string name="settings_daily_goal">1日の目標</string>
+    <string name="settings_language">言語</string>
+    <string name="settings_close">閉じる</string>
+    <string name="settings_language_system">システムの既定</string>
+
+    <!-- Report -->
+    <string name="report_title">デイリーレポート</string>
+    <string name="report_focus_time">集中時間</string>
+    <string name="report_break_time">休憩時間</string>
+    <string name="report_avg_session">平均セッション</string>
+    <string name="report_session_count">セッション数</string>
+    <string name="report_range_weekly">週間</string>
+    <string name="report_range_monthly">月間</string>
+    <string name="report_chart_title">時間帯別の集中度（分）</string>
+
+    <!-- Tasks -->
+    <string name="task_add">タスクを追加</string>
+    <string name="task_add_confirm">追加</string>
+    <string name="task_add_cancel">キャンセル</string>
+    <string name="task_empty">まだタスクがありません。＋をタップして追加してください。</string>
+    <string name="task_filter_active">進行中</string>
+    <string name="task_filter_completed">完了</string>
+    <string name="task_title_label">タイトル</string>
+    <string name="task_category_label">カテゴリ</string>
+    <string name="task_priority_label">優先度</string>
+    <string name="task_tags_label">タグ（カンマ区切り）</string>
+    <string name="task_subtasks_label">サブタスク（カンマ区切り）</string>
+    <string name="task_subtask_progress">%1$d / %2$d サブタスク</string>
+
+    <string name="category_work">仕事</string>
+    <string name="category_study">勉強</string>
+    <string name="category_personal">プライベート</string>
+    <string name="category_health">健康</string>
+    <string name="priority_low">低</string>
+    <string name="priority_medium">中</string>
+    <string name="priority_high">高</string>
+
+    <string name="upsell_title">Pro にする</string>
+    <string name="upsell_message">無料プランは %1$d 件のタスクに制限されています。Pro にアップグレードすると無制限になります。</string>
+    <string name="upsell_confirm">アップグレード</string>
+    <string name="upsell_dismiss">後で</string>
+
+    <!-- Widget -->
+    <string name="widget_description">進行中のポモドーロタイマーを表示します</string>
+</resources>
