@@ -25,7 +25,7 @@
     <string name="timer_open_tasks">Mis tareas</string>
     <string name="timer_open_report">Informe</string>
     <string name="timer_open_settings">Ajustes</string>
-    <string name="nav_timer">Temporizador</string>
+    <string name="nav_timer">Inicio</string>
     <string name="timer_streak">Racha de %1$d días</string>
     <string name="timer_todays_tasks">Tareas de hoy</string>
     <string name="timer_no_tasks">Añade tu primera tarea para empezar</string>

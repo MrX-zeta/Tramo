@@ -30,7 +30,7 @@
     <string name="timer_open_tasks">My Tasks</string>
     <string name="timer_open_report">Report</string>
     <string name="timer_open_settings">Settings</string>
-    <string name="nav_timer">Timer</string>
+    <string name="nav_timer">Home</string>
     <string name="timer_streak">%1$d day streak</string>
     <string name="timer_todays_tasks">Today\'s Tasks</string>
     <string name="timer_no_tasks">Add your first task to get started</string>

@@ -10,8 +10,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -41,7 +43,12 @@ fun TramoBottomBar(
                 selected = currentRoute == destination.route,
                 onClick = { onSelect(destination) },
                 icon = { Icon(destination.icon, contentDescription = stringResource(destination.labelRes)) },
-                label = { Text(stringResource(destination.labelRes)) }
+                label = { Text(stringResource(destination.labelRes)) },
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedTextColor = MaterialTheme.colorScheme.primary
+                )
             )
         }
     }

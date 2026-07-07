@@ -25,7 +25,7 @@
     <string name="timer_open_tasks">Meine Aufgaben</string>
     <string name="timer_open_report">Bericht</string>
     <string name="timer_open_settings">Einstellungen</string>
-    <string name="nav_timer">Timer</string>
+    <string name="nav_timer">Start</string>
     <string name="timer_streak">%1$d Tage in Folge</string>
     <string name="timer_todays_tasks">Heutige Aufgaben</string>
     <string name="timer_no_tasks">Füge deine erste Aufgabe hinzu</string>
