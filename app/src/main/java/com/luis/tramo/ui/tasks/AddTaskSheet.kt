@@ -60,15 +60,19 @@ import com.luis.tramo.data.task.Subtask
 import com.luis.tramo.data.task.TaskCategory
 import com.luis.tramo.data.task.TaskPriority
 import com.luis.tramo.ui.theme.TaskSwatches
+import java.time.DayOfWeek
+import java.time.temporal.WeekFields
+import java.util.Locale
 import kotlinx.coroutines.delay
 
-private data class TaskTemplate(val labelRes: Int, val title: String, val emoji: String)
+/** A quick-fill template. The title comes from [labelRes] (localized) — never a hardcoded literal. */
+private data class TaskTemplate(val labelRes: Int, val emoji: String)
 
 private val TEMPLATES = listOf(
-    TaskTemplate(R.string.template_meeting, "Meeting", "📅"),
-    TaskTemplate(R.string.template_email, "Email", "✉️"),
-    TaskTemplate(R.string.template_coding, "Coding", "💻"),
-    TaskTemplate(R.string.template_design, "Design", "🎨")
+    TaskTemplate(R.string.template_meeting, "📅"),
+    TaskTemplate(R.string.template_email, "✉️"),
+    TaskTemplate(R.string.template_coding, "💻"),
+    TaskTemplate(R.string.template_design, "🎨")
 )
 
 private val EMOJIS = listOf(
@@ -80,7 +84,14 @@ private val EMOJIS = listOf(
     "🍵", "🎧", "🎵", "🎬", "📷", "🌱", "🔥", "⭐"
 )
 
-private val DAY_LABELS = listOf("M", "T", "W", "T", "F", "S", "S")
+/** Weekdays ordered by the current locale's first day of week (e.g. Mon-first vs Sun-first). */
+private fun orderedWeekDays(locale: Locale): List<DayOfWeek> {
+    val first = WeekFields.of(locale).firstDayOfWeek
+    return (0L until 7L).map { first.plus(it) }
+}
+
+private fun String.splitToTrimmedList(): List<String> =
+    split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -94,10 +105,14 @@ fun AddTaskSheet(
 
     var title by remember { mutableStateOf("") }
     var emoji by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf(TaskCategory.WORK) }
     var priority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     var colorArgb by remember { mutableStateOf(TaskSwatches.first()) }
+    var tagsText by remember { mutableStateOf("") }
+    var subtasksText by remember { mutableStateOf("") }
     var recurring by remember { mutableStateOf(false) }
-    val recurringDays = remember { mutableStateListOf<Int>() }
+    val recurringDays = remember { mutableStateListOf<DayOfWeek>() }
+    val weekDays = remember { orderedWeekDays(Locale.getDefault()) }
 
     // Auto-open the keyboard on the title once the sheet has settled (less friction).
     LaunchedEffect(Unit) {
@@ -115,15 +130,16 @@ fun AddTaskSheet(
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Quick-fill templates.
+            // Quick-fill templates. The title is filled from the localized resource, not English.
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(TEMPLATES) { template ->
+                    val localizedTitle = stringResource(template.labelRes)
                     AssistChip(
                         onClick = {
-                            title = template.title
+                            title = localizedTitle
                             emoji = template.emoji
                         },
-                        label = { Text("${template.emoji} ${stringResource(template.labelRes)}") }
+                        label = { Text("${template.emoji} $localizedTitle") }
                     )
                 }
             }
@@ -141,6 +157,18 @@ fun AddTaskSheet(
                     .fillMaxWidth()
                     .focusRequester(titleFocus)
             )
+
+            // Category.
+            Text(stringResource(R.string.task_category_label), style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TaskCategory.entries.forEach { entry ->
+                    FilterChip(
+                        selected = category == entry,
+                        onClick = { category = entry },
+                        label = { Text(stringResource(entry.labelRes)) }
+                    )
+                }
+            }
 
             // Priority.
             Text(stringResource(R.string.task_priority_label), style = MaterialTheme.typography.labelLarge)
@@ -214,7 +242,22 @@ fun AddTaskSheet(
                 }
             }
 
-            // Recurring toggle + day-of-week selector.
+            // Tags & subtasks (comma-separated).
+            OutlinedTextField(
+                value = tagsText,
+                onValueChange = { tagsText = it },
+                label = { Text(stringResource(R.string.task_tags_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = subtasksText,
+                onValueChange = { subtasksText = it },
+                label = { Text(stringResource(R.string.task_subtasks_label)) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Recurring toggle + localized day-of-week selector (respects locale first-day).
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -227,15 +270,16 @@ fun AddTaskSheet(
                 Switch(checked = recurring, onCheckedChange = { recurring = it })
             }
             if (recurring) {
+                val locale = Locale.getDefault()
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DAY_LABELS.forEachIndexed { index, label ->
-                        val selected = index in recurringDays
+                    weekDays.forEach { day ->
+                        val selected = day in recurringDays
                         FilterChip(
                             selected = selected,
                             onClick = {
-                                if (selected) recurringDays.remove(index) else recurringDays.add(index)
+                                if (selected) recurringDays.remove(day) else recurringDays.add(day)
                             },
-                            label = { Text(label) }
+                            label = { Text(day.getDisplayName(java.time.format.TextStyle.NARROW, locale)) }
                         )
                     }
                 }
@@ -247,13 +291,13 @@ fun AddTaskSheet(
                         NewTaskInput(
                             title = title,
                             iconEmoji = emoji,
-                            category = TaskCategory.WORK,
+                            category = category,
                             priority = priority,
                             colorArgb = colorArgb,
-                            tags = emptyList(),
-                            subtasks = emptyList(),
+                            tags = tagsText.splitToTrimmedList(),
+                            subtasks = subtasksText.splitToTrimmedList().map { Subtask(it) },
                             isRecurring = recurring,
-                            recurringDays = recurringDays.sorted().toList()
+                            recurringDays = recurringDays.toList()
                         )
                     )
                 },
