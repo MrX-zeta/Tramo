@@ -25,6 +25,34 @@
     <string name="timer_stop">Stop</string>
     <string name="timer_sessions_today">%1$d focus sessions today</string>
     <string name="timer_channel_name">Pomodoro Timer</string>
+    <string name="timer_open_tasks">My Tasks</string>
+
+    <!-- Tasks -->
+    <string name="task_add">Add task</string>
+    <string name="task_add_confirm">Add</string>
+    <string name="task_add_cancel">Cancel</string>
+    <string name="task_empty">No tasks yet. Tap + to add one.</string>
+    <string name="task_filter_active">Active</string>
+    <string name="task_filter_completed">Completed</string>
+    <string name="task_title_label">Title</string>
+    <string name="task_category_label">Category</string>
+    <string name="task_priority_label">Priority</string>
+    <string name="task_tags_label">Tags (comma separated)</string>
+    <string name="task_subtasks_label">Subtasks (comma separated)</string>
+    <string name="task_subtask_progress">%1$d / %2$d subtasks</string>
+
+    <string name="category_work">Work</string>
+    <string name="category_study">Study</string>
+    <string name="category_personal">Personal</string>
+    <string name="category_health">Health</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+
+    <string name="upsell_title">Go Pro</string>
+    <string name="upsell_message">Free plan is limited to %1$d tasks. Upgrade to Pro for unlimited tasks.</string>
+    <string name="upsell_confirm">Upgrade</string>
+    <string name="upsell_dismiss">Maybe later</string>
 
     <!-- Widget -->
     <string name="widget_description">Shows your ongoing Pomodoro timer</string>
