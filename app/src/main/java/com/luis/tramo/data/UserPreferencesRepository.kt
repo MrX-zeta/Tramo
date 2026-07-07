@@ -10,9 +10,22 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Persisted snapshot of the running/paused session so it survives process death. DataStore only
+ * ever holds this (plus settings) — never a per-second live tick.
+ */
+data class ActiveSession(
+    val sessionType: String,
+    val totalSeconds: Int,
+    val running: Boolean,
+    /** Absolute wall-clock end; authoritative for a RUNNING session. */
+    val endEpochMillis: Long,
+    /** Remaining seconds for a PAUSED session. */
+    val pausedRemaining: Int
+)
 
 @Singleton
 class UserPreferencesRepository @Inject constructor(
@@ -20,11 +33,6 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     val onboarded: Flow<Boolean> = dataStore.data.map { prefs ->
         prefs[ONBOARDED] ?: false
-    }
-
-    /** Completed focus sessions for the current day; resets automatically at midnight. */
-    val sessionsToday: Flow<Int> = dataStore.data.map { prefs ->
-        countForToday(prefs)
     }
 
     // --- Settings ---
@@ -67,27 +75,41 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     suspend fun setOnboarded(value: Boolean) {
+        dataStore.edit { it[ONBOARDED] = value }
+    }
+
+    // --- Active session snapshot ---
+
+    suspend fun saveActiveSession(session: ActiveSession) {
         dataStore.edit { prefs ->
-            prefs[ONBOARDED] = value
+            prefs[ACTIVE_TYPE] = session.sessionType
+            prefs[ACTIVE_TOTAL] = session.totalSeconds
+            prefs[ACTIVE_RUNNING] = session.running
+            prefs[ACTIVE_END] = session.endEpochMillis
+            prefs[ACTIVE_PAUSED_REMAINING] = session.pausedRemaining
         }
     }
 
-    /** Increments today's completed-focus counter, rolling over to 1 on a new day. */
-    suspend fun incrementFocusSessions(): Int {
-        var newValue = 0
+    suspend fun clearActiveSession() {
         dataStore.edit { prefs ->
-            newValue = countForToday(prefs) + 1
-            prefs[SESSIONS_COUNT] = newValue
-            prefs[SESSIONS_DATE] = LocalDate.now().toEpochDay()
+            prefs.remove(ACTIVE_TYPE)
+            prefs.remove(ACTIVE_TOTAL)
+            prefs.remove(ACTIVE_RUNNING)
+            prefs.remove(ACTIVE_END)
+            prefs.remove(ACTIVE_PAUSED_REMAINING)
         }
-        return newValue
     }
 
-    suspend fun sessionsTodayValue(): Int = sessionsToday.first()
-
-    private fun countForToday(prefs: Preferences): Int {
-        val storedDay = prefs[SESSIONS_DATE] ?: -1L
-        return if (storedDay == LocalDate.now().toEpochDay()) prefs[SESSIONS_COUNT] ?: 0 else 0
+    suspend fun getActiveSession(): ActiveSession? {
+        val prefs = dataStore.data.first()
+        val type = prefs[ACTIVE_TYPE] ?: return null
+        return ActiveSession(
+            sessionType = type,
+            totalSeconds = prefs[ACTIVE_TOTAL] ?: 0,
+            running = prefs[ACTIVE_RUNNING] ?: false,
+            endEpochMillis = prefs[ACTIVE_END] ?: 0L,
+            pausedRemaining = prefs[ACTIVE_PAUSED_REMAINING] ?: 0
+        )
     }
 
     private companion object {
@@ -96,12 +118,16 @@ class UserPreferencesRepository @Inject constructor(
         const val DEFAULT_DAILY_GOAL = 8
 
         val ONBOARDED = booleanPreferencesKey("onboarded")
-        val SESSIONS_COUNT = intPreferencesKey("sessions_today")
-        val SESSIONS_DATE = longPreferencesKey("sessions_date")
         val FOCUS_PRESET = intPreferencesKey("focus_preset_minutes")
         val BREAK_PRESET = intPreferencesKey("break_preset_minutes")
         val DARK_MODE = booleanPreferencesKey("dark_mode_override")
         val DAILY_GOAL = intPreferencesKey("daily_goal")
         val LANGUAGE_TAG = stringPreferencesKey("language_tag")
+
+        val ACTIVE_TYPE = stringPreferencesKey("active_session_type")
+        val ACTIVE_TOTAL = intPreferencesKey("active_total_seconds")
+        val ACTIVE_RUNNING = booleanPreferencesKey("active_running")
+        val ACTIVE_END = longPreferencesKey("active_end_epoch_millis")
+        val ACTIVE_PAUSED_REMAINING = intPreferencesKey("active_paused_remaining")
     }
 }
