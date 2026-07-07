@@ -26,6 +26,17 @@
     <string name="timer_sessions_today">%1$d focus sessions today</string>
     <string name="timer_channel_name">Pomodoro Timer</string>
     <string name="timer_open_tasks">My Tasks</string>
+    <string name="timer_open_report">Report</string>
+
+    <!-- Report -->
+    <string name="report_title">Daily Report</string>
+    <string name="report_focus_time">Focus time</string>
+    <string name="report_break_time">Break time</string>
+    <string name="report_avg_session">Avg session</string>
+    <string name="report_session_count">Sessions</string>
+    <string name="report_range_weekly">Weekly</string>
+    <string name="report_range_monthly">Monthly</string>
+    <string name="report_chart_title">Focus intensity by hour (minutes)</string>
 
     <!-- Tasks -->
     <string name="task_add">Add task</string>
