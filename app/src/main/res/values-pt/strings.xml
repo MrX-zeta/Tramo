@@ -74,6 +74,13 @@
     <string name="task_tags_label">Etiquetas (separadas por vírgulas)</string>
     <string name="task_subtasks_label">Subtarefas (separadas por vírgulas)</string>
     <string name="task_subtask_progress">%1$d / %2$d subtarefas</string>
+    <string name="task_icon_label">Ícone</string>
+    <string name="task_color_label">Cor</string>
+    <string name="task_recurring_label">Repetir</string>
+    <string name="template_meeting">Reunião</string>
+    <string name="template_email">E-mail</string>
+    <string name="template_coding">Programar</string>
+    <string name="template_design">Design</string>
 
     <string name="category_work">Trabalho</string>
     <string name="category_study">Estudo</string>

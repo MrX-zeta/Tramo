@@ -94,6 +94,13 @@
     <string name="task_tags_label">Etiquetas (separadas por comas)</string>
     <string name="task_subtasks_label">Subtareas (separadas por comas)</string>
     <string name="task_subtask_progress">%1$d / %2$d subtareas</string>
+    <string name="task_icon_label">Icono</string>
+    <string name="task_color_label">Color</string>
+    <string name="task_recurring_label">Repetir</string>
+    <string name="template_meeting">Reunión</string>
+    <string name="template_email">Correo</string>
+    <string name="template_coding">Programar</string>
+    <string name="template_design">Diseño</string>
 
     <string name="category_work">Trabajo</string>
     <string name="category_study">Estudio</string>

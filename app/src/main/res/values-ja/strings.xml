@@ -74,6 +74,13 @@
     <string name="task_tags_label">タグ（カンマ区切り）</string>
     <string name="task_subtasks_label">サブタスク（カンマ区切り）</string>
     <string name="task_subtask_progress">%1$d / %2$d サブタスク</string>
+    <string name="task_icon_label">アイコン</string>
+    <string name="task_color_label">色</string>
+    <string name="task_recurring_label">繰り返す</string>
+    <string name="template_meeting">会議</string>
+    <string name="template_email">メール</string>
+    <string name="template_coding">コーディング</string>
+    <string name="template_design">デザイン</string>
 
     <string name="category_work">仕事</string>
     <string name="category_study">勉強</string>

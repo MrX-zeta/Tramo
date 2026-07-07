@@ -74,6 +74,13 @@
     <string name="task_tags_label">Tags (durch Kommas getrennt)</string>
     <string name="task_subtasks_label">Teilaufgaben (durch Kommas getrennt)</string>
     <string name="task_subtask_progress">%1$d / %2$d Teilaufgaben</string>
+    <string name="task_icon_label">Symbol</string>
+    <string name="task_color_label">Farbe</string>
+    <string name="task_recurring_label">Wiederholen</string>
+    <string name="template_meeting">Besprechung</string>
+    <string name="template_email">E-Mail</string>
+    <string name="template_coding">Programmieren</string>
+    <string name="template_design">Design</string>
 
     <string name="category_work">Arbeit</string>
     <string name="category_study">Studium</string>
