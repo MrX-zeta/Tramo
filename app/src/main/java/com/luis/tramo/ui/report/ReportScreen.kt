@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -60,7 +61,9 @@ import java.util.Locale
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
+import com.luis.tramo.ui.components.ScreenEntrance
 import com.luis.tramo.ui.components.StatCard
+import com.luis.tramo.ui.components.rememberReduceMotion
 import com.luis.tramo.ui.theme.Spacing
 import com.luis.tramo.ui.theme.TabularFigures
 import com.luis.tramo.ui.theme.TramoTheme
@@ -93,6 +96,10 @@ fun ReportScreen(
     val heat by viewModel.heatmapState.collectAsStateWithLifecycle()
     val monthly by viewModel.monthlyState.collectAsStateWithLifecycle()
 
+    val reduceMotion = rememberReduceMotion()
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { visible = true }
+
     Scaffold(
         topBar = { ReportHeader(onOpenSettings) },
         bottomBar = bottomBar
@@ -106,26 +113,32 @@ fun ReportScreen(
                 .padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
-            TodayCard(today)
-            OverviewCard(state = state, onSelectRange = viewModel::selectRange)
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                StatCard(
-                    value = heat.totalCompletions.toString(),
-                    label = stringResource(R.string.report_total_sessions),
-                    valueColor = MaterialTheme.colorScheme.primary,
-                    icon = Icons.Filled.CheckCircle,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    value = heat.activeDays.toString(),
-                    label = stringResource(R.string.report_active_days),
-                    valueColor = MaterialTheme.colorScheme.primary,
-                    icon = Icons.Filled.LocalFireDepartment,
-                    iconTint = TramoTheme.progress,
-                    modifier = Modifier.weight(1f)
-                )
+            // Entrance animation applies to the summary/KPI cards only; the chart & heatmap cards
+            // keep their own existing animations (no double-animation).
+            ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
+                TodayCard(today)
             }
-            HeatmapCard(cells = heat.cells, columnLabels = remember { viewModel.heatmapColumnLabels() })
+            OverviewCard(state = state, onSelectRange = viewModel::selectRange)
+            ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                    StatCard(
+                        value = heat.totalCompletions.toString(),
+                        label = stringResource(R.string.report_total_sessions),
+                        valueColor = MaterialTheme.colorScheme.primary,
+                        icon = Icons.Filled.CheckCircle,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        value = heat.activeDays.toString(),
+                        label = stringResource(R.string.report_active_days),
+                        valueColor = MaterialTheme.colorScheme.primary,
+                        icon = Icons.Filled.LocalFireDepartment,
+                        iconTint = TramoTheme.progress,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            HeatmapCard(cells = heat.cells, columnLabels = heat.columnLabels)
             MonthlyCard(monthly = monthly)
         }
     }
@@ -217,21 +230,20 @@ private fun BreakdownItem(label: String, value: String, dotColor: androidx.compo
 private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> Unit) {
     ElevatedCard(shape = CARD_SHAPE, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.report_focus_time),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                SingleChoiceSegmentedButtonRow {
-                    ReportRange.entries.forEachIndexed { index, range ->
-                        SegmentedButton(
-                            selected = state.range == range,
-                            onClick = { onSelectRange(range) },
-                            shape = SegmentedButtonDefaults.itemShape(index, ReportRange.entries.size)
-                        ) {
-                            Text(stringResource(range.labelRes()))
-                        }
+            // Title on its own row; toggle on the row below (never overlaps the title).
+            Text(
+                text = stringResource(R.string.report_focus_time),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(Modifier.height(Spacing.md))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                ReportRange.entries.forEachIndexed { index, range ->
+                    SegmentedButton(
+                        selected = state.range == range,
+                        onClick = { onSelectRange(range) },
+                        shape = SegmentedButtonDefaults.itemShape(index, ReportRange.entries.size)
+                    ) {
+                        Text(stringResource(range.labelRes()))
                     }
                 }
             }
@@ -373,8 +385,17 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
                 Spacer(Modifier.height(Spacing.xs))
                 Row(modifier = Modifier.padding(start = labelWidth + Spacing.sm)) {
                     columnLabels.forEachIndexed { index, label ->
-                        Box(Modifier.size(width = cell, height = 12.dp), contentAlignment = Alignment.Center) {
-                            Text(label, style = MaterialTheme.typography.labelSmall, color = onSurfaceVariant)
+                        Box(Modifier.size(width = cell, height = 14.dp), contentAlignment = Alignment.CenterStart) {
+                            if (label.isNotEmpty()) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.wrapContentWidth(unbounded = true)
+                                )
+                            }
                         }
                         if (index < columnLabels.lastIndex) Spacer(Modifier.width(gap))
                     }
