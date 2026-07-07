@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 data class TaskPreview(val emoji: String, val title: String)
@@ -41,15 +42,19 @@ data class TimerUiState(
 class TimerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val stateHolder: TimerStateHolder,
-    preferences: UserPreferencesRepository,
+    private val preferences: UserPreferencesRepository,
     sessionRepository: SessionRepository,
     taskRepository: TaskRepository
 ) : ViewModel() {
 
+    // Local-midnight boundary; "today" is derived from Room timestamps, not an in-memory counter.
+    private val todayStart: Long =
+        LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
     val uiState: StateFlow<TimerUiState> =
         combine(
             stateHolder.state,
-            preferences.sessionsToday,
+            sessionRepository.focusCountSince(todayStart),
             sessionRepository.focusDayStamps(),
             taskRepository.activeTasks()
         ) { timer, count, dayStamps, tasks ->
@@ -65,9 +70,10 @@ class TimerViewModel @Inject constructor(
         )
 
     init {
-        // While idle on a focus session, reflect the current preset so a change made in Settings
-        // is visible immediately (the running session is never altered mid-way).
         viewModelScope.launch {
+            restoreFromSnapshot()
+            // While idle on a focus session, reflect the current preset so a change made in Settings
+            // is visible immediately (the running session is never altered mid-way).
             preferences.focusPresetMinutes.collect { minutes ->
                 val current = stateHolder.state.value
                 val seconds = minutes * 60
@@ -81,6 +87,21 @@ class TimerViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    /** On cold start, rebuild the running/paused session from the persisted absolute timestamp. */
+    private suspend fun restoreFromSnapshot() {
+        val active = preferences.getActiveSession() ?: return
+        val type = runCatching { SessionType.valueOf(active.sessionType) }.getOrNull() ?: return
+        if (active.running) {
+            val remaining = ((active.endEpochMillis - System.currentTimeMillis() + 999) / 1000)
+                .toInt().coerceAtLeast(0)
+            stateHolder.set(TimerState(type, TimerStatus.RUNNING, remaining, active.totalSeconds))
+            // The service resumes ticking (or finalizes if the deadline already passed).
+            PomodoroTimerService.requestRestore(context)
+        } else {
+            stateHolder.set(TimerState(type, TimerStatus.PAUSED, active.pausedRemaining, active.totalSeconds))
         }
     }
 
