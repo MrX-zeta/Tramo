@@ -12,9 +12,18 @@ data class TaskEntity(
     val tags: List<String>,
     val subtasks: List<Subtask>,
     val isCompleted: Boolean = false,
-    val createdAt: Long = 0L
+    val createdAt: Long = 0L,
+    val iconEmoji: String = "",
+    /** Custom card color; 0 falls back to the category color. */
+    val colorArgb: Long = 0L,
+    val isRecurring: Boolean = false,
+    /** Recurring days of week, 0 = Monday .. 6 = Sunday. */
+    val recurringDays: List<Int> = emptyList()
 ) {
     val completedSubtasks: Int get() = subtasks.count { it.done }
+
+    /** The card's effective accent color: custom if set, otherwise the category color. */
+    val effectiveColorArgb: Long get() = if (colorArgb != 0L) colorArgb else category.colorArgb
 
     /** completed / total subtasks, 0f when there are no subtasks. */
     val progress: Float

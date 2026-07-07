@@ -23,6 +23,12 @@ class TaskConverters {
     fun toSubtasks(value: String): List<Subtask> = json.decodeFromString(value)
 
     @TypeConverter
+    fun fromIntList(days: List<Int>): String = json.encodeToString(days)
+
+    @TypeConverter
+    fun toIntList(value: String): List<Int> = json.decodeFromString(value)
+
+    @TypeConverter
     fun fromCategory(category: TaskCategory): String = category.name
 
     @TypeConverter

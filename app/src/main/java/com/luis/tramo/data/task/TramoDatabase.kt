@@ -8,7 +8,7 @@ import com.luis.tramo.data.session.SessionRecordEntity
 
 @Database(
     entities = [TaskEntity::class, SessionRecordEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(TaskConverters::class)
