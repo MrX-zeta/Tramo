@@ -32,4 +32,14 @@ interface SessionDao {
 
     @Query("SELECT COUNT(*) FROM session_records WHERE type = 'FOCUS' AND completedAt >= :startMillis")
     fun focusCountSince(startMillis: Long): Flow<Int>
+
+    /** Distinct local calendar days (yyyy-MM-dd) that have at least one focus session. */
+    @Query(
+        """
+        SELECT DISTINCT strftime('%Y-%m-%d', completedAt / 1000, 'unixepoch', 'localtime')
+        FROM session_records
+        WHERE type = 'FOCUS'
+        """
+    )
+    fun focusDayStamps(): Flow<List<String>>
 }
