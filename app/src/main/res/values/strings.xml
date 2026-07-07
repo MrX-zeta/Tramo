@@ -55,6 +55,10 @@
     <string name="report_range_weekly">Weekly</string>
     <string name="report_range_monthly">Monthly</string>
     <string name="report_chart_title">Focus intensity by hour (minutes)</string>
+    <string name="report_total_completions">Total</string>
+    <string name="report_current_streak">Current streak</string>
+    <string name="report_longest_streak">Longest streak</string>
+    <string name="report_activity_title">Activity</string>
 
     <!-- Tasks -->
     <string name="task_add">Add task</string>
