@@ -33,7 +33,7 @@
     <string name="nav_timer">Timer</string>
     <string name="timer_streak">%1$d day streak</string>
     <string name="timer_todays_tasks">Today\'s Tasks</string>
-    <string name="timer_no_tasks">No tasks yet</string>
+    <string name="timer_no_tasks">Add your first task to get started</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -70,7 +70,7 @@
     <string name="task_add">Add task</string>
     <string name="task_add_confirm">Add</string>
     <string name="task_add_cancel">Cancel</string>
-    <string name="task_empty">No tasks yet. Tap + to add one.</string>
+    <string name="task_empty">Add your first task to get started</string>
     <string name="task_filter_active">Active</string>
     <string name="task_filter_completed">Completed</string>
     <string name="task_title_label">Title</string>

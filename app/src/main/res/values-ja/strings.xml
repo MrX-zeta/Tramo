@@ -28,7 +28,7 @@
     <string name="nav_timer">タイマー</string>
     <string name="timer_streak">%1$d 日連続</string>
     <string name="timer_todays_tasks">今日のタスク</string>
-    <string name="timer_no_tasks">タスクなし</string>
+    <string name="timer_no_tasks">最初のタスクを追加して始めましょう</string>
 
     <!-- Settings -->
     <string name="settings_title">設定</string>
@@ -65,7 +65,7 @@
     <string name="task_add">タスクを追加</string>
     <string name="task_add_confirm">追加</string>
     <string name="task_add_cancel">キャンセル</string>
-    <string name="task_empty">まだタスクがありません。＋をタップして追加してください。</string>
+    <string name="task_empty">最初のタスクを追加して始めましょう</string>
     <string name="task_filter_active">進行中</string>
     <string name="task_filter_completed">完了</string>
     <string name="task_title_label">タイトル</string>

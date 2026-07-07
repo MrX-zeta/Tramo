@@ -28,7 +28,7 @@
     <string name="nav_timer">Minuteur</string>
     <string name="timer_streak">Série de %1$d jours</string>
     <string name="timer_todays_tasks">Tâches du jour</string>
-    <string name="timer_no_tasks">Aucune tâche</string>
+    <string name="timer_no_tasks">Ajoutez votre première tâche pour commencer</string>
 
     <!-- Settings -->
     <string name="settings_title">Paramètres</string>
@@ -65,7 +65,7 @@
     <string name="task_add">Ajouter une tâche</string>
     <string name="task_add_confirm">Ajouter</string>
     <string name="task_add_cancel">Annuler</string>
-    <string name="task_empty">Aucune tâche pour l\'instant. Appuyez sur + pour en ajouter une.</string>
+    <string name="task_empty">Ajoutez votre première tâche pour commencer</string>
     <string name="task_filter_active">Actives</string>
     <string name="task_filter_completed">Terminées</string>
     <string name="task_title_label">Titre</string>

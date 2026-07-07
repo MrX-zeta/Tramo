@@ -28,7 +28,7 @@
     <string name="nav_timer">Temporizador</string>
     <string name="timer_streak">Racha de %1$d días</string>
     <string name="timer_todays_tasks">Tareas de hoy</string>
-    <string name="timer_no_tasks">Aún no hay tareas</string>
+    <string name="timer_no_tasks">Añade tu primera tarea para empezar</string>
 
     <!-- Settings -->
     <string name="settings_title">Ajustes</string>
@@ -65,7 +65,7 @@
     <string name="task_add">Añadir tarea</string>
     <string name="task_add_confirm">Añadir</string>
     <string name="task_add_cancel">Cancelar</string>
-    <string name="task_empty">Aún no hay tareas. Toca + para añadir una.</string>
+    <string name="task_empty">Añade tu primera tarea para empezar</string>
     <string name="task_filter_active">Activas</string>
     <string name="task_filter_completed">Completadas</string>
     <string name="task_title_label">Título</string>
