@@ -42,8 +42,6 @@
     <string name="settings_language">Language</string>
     <string name="settings_close">Close</string>
     <string name="settings_language_system">System default</string>
-    <string name="settings_language_english">English</string>
-    <string name="settings_language_spanish">Español</string>
 
     <!-- Report -->
     <string name="report_title">Daily Report</string>

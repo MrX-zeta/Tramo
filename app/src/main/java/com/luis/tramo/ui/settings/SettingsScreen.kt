@@ -5,19 +5,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -36,14 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
-
-private data class LanguageOption(val tag: String, val labelRes: Int)
-
-private val LANGUAGE_OPTIONS = listOf(
-    LanguageOption("", R.string.settings_language_system),
-    LanguageOption("en", R.string.settings_language_english),
-    LanguageOption("es", R.string.settings_language_spanish)
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,7 +144,7 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = stringResource(languageLabelFor(state.languageTag)),
+                    text = localeLabelFor(state.languageTag),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -165,8 +152,8 @@ fun SettingsScreen(
     }
 
     if (showLanguageDialog) {
-        LanguagePickerDialog(
-            current = state.languageTag,
+        LocalePickerSheet(
+            currentTag = state.languageTag,
             onSelect = {
                 viewModel.setLanguage(it)
                 showLanguageDialog = false
@@ -202,44 +189,3 @@ private fun errorTextFor(error: FieldError): Int = when (error) {
     FieldError.INVALID_NUMBER -> R.string.settings_error_invalid_number
     FieldError.FOCUS_BELOW_BREAK -> R.string.settings_error_focus_below_break
 }
-
-@Composable
-private fun LanguagePickerDialog(
-    current: String,
-    onSelect: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_language)) },
-        text = {
-            Column {
-                LANGUAGE_OPTIONS.forEach { option ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(
-                                selected = current == option.tag,
-                                onClick = { onSelect(option.tag) }
-                            )
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = current == option.tag,
-                            onClick = { onSelect(option.tag) }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(option.labelRes))
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_close)) }
-        }
-    )
-}
-
-private fun languageLabelFor(tag: String): Int =
-    LANGUAGE_OPTIONS.firstOrNull { it.tag == tag }?.labelRes ?: R.string.settings_language_system
