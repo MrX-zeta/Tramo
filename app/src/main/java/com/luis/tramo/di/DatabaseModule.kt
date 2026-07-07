@@ -2,6 +2,7 @@ package com.luis.tramo.di
 
 import android.content.Context
 import androidx.room.Room
+import com.luis.tramo.data.session.SessionDao
 import com.luis.tramo.data.task.TaskDao
 import com.luis.tramo.data.task.TramoDatabase
 import dagger.Module
@@ -18,8 +19,13 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): TramoDatabase =
-        Room.databaseBuilder(context, TramoDatabase::class.java, "tramo.db").build()
+        Room.databaseBuilder(context, TramoDatabase::class.java, "tramo.db")
+            .fallbackToDestructiveMigration(dropAllTables = true)
+            .build()
 
     @Provides
     fun provideTaskDao(database: TramoDatabase): TaskDao = database.taskDao()
+
+    @Provides
+    fun provideSessionDao(database: TramoDatabase): SessionDao = database.sessionDao()
 }
