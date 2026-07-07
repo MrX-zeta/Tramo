@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -24,6 +25,38 @@ class UserPreferencesRepository @Inject constructor(
     /** Completed focus sessions for the current day; resets automatically at midnight. */
     val sessionsToday: Flow<Int> = dataStore.data.map { prefs ->
         countForToday(prefs)
+    }
+
+    // --- Settings ---
+
+    /** Focus session length in minutes (15 / 25 / 50). Default 25. */
+    val focusPresetMinutes: Flow<Int> = dataStore.data.map { it[FOCUS_PRESET] ?: DEFAULT_FOCUS_MINUTES }
+
+    /** Explicit dark-mode override; null means follow the system setting. */
+    val darkModeOverride: Flow<Boolean?> = dataStore.data.map { it[DARK_MODE] }
+
+    /** Daily focus-session goal. Default 8. */
+    val dailyGoal: Flow<Int> = dataStore.data.map { it[DAILY_GOAL] ?: DEFAULT_DAILY_GOAL }
+
+    /** BCP-47 language tag; empty means follow the system locale. */
+    val languageTag: Flow<String> = dataStore.data.map { it[LANGUAGE_TAG] ?: "" }
+
+    suspend fun setFocusPreset(minutes: Int) {
+        dataStore.edit { it[FOCUS_PRESET] = minutes }
+    }
+
+    suspend fun setDarkModeOverride(value: Boolean?) {
+        dataStore.edit { prefs ->
+            if (value == null) prefs.remove(DARK_MODE) else prefs[DARK_MODE] = value
+        }
+    }
+
+    suspend fun setDailyGoal(goal: Int) {
+        dataStore.edit { it[DAILY_GOAL] = goal }
+    }
+
+    suspend fun setLanguageTag(tag: String) {
+        dataStore.edit { it[LANGUAGE_TAG] = tag }
     }
 
     suspend fun setOnboarded(value: Boolean) {
@@ -51,8 +84,15 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     private companion object {
+        const val DEFAULT_FOCUS_MINUTES = 25
+        const val DEFAULT_DAILY_GOAL = 8
+
         val ONBOARDED = booleanPreferencesKey("onboarded")
         val SESSIONS_COUNT = intPreferencesKey("sessions_today")
         val SESSIONS_DATE = longPreferencesKey("sessions_date")
+        val FOCUS_PRESET = intPreferencesKey("focus_preset_minutes")
+        val DARK_MODE = booleanPreferencesKey("dark_mode_override")
+        val DAILY_GOAL = intPreferencesKey("daily_goal")
+        val LANGUAGE_TAG = stringPreferencesKey("language_tag")
     }
 }
