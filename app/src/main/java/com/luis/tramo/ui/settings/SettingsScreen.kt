@@ -230,7 +230,9 @@ private fun TimerSettingsCard(state: SettingsUiState, viewModel: SettingsViewMod
             label = stringResource(R.string.settings_long_break),
             options = SettingsViewModel.LONG_BREAK_OPTIONS,
             selected = state.longBreakMinutes,
-            onSelect = viewModel::setLongBreak
+            onSelect = viewModel::setLongBreak,
+            // Long break must be >= the short break; dim/disable any lower value.
+            minEnabled = state.breakMinutes
         )
     }
 }
@@ -241,7 +243,8 @@ private fun ChipRow(
     label: String,
     options: List<Int>,
     selected: Int,
-    onSelect: (Int) -> Unit
+    onSelect: (Int) -> Unit,
+    minEnabled: Int = 0
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
@@ -255,6 +258,7 @@ private fun ChipRow(
             options.forEach { option ->
                 FilterChip(
                     selected = selected == option,
+                    enabled = option >= minEnabled,
                     onClick = { onSelect(option) },
                     label = { Text(option.toString(), style = TabularFigures.merge(MaterialTheme.typography.labelLarge)) },
                     colors = FilterChipDefaults.filterChipColors(

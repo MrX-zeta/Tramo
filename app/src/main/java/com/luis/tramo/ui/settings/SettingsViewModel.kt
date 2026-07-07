@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -97,8 +98,24 @@ class SettingsViewModel @Inject constructor(
     // --- Every setter writes to DataStore immediately (no Save button). ---
 
     fun setFocusPreset(minutes: Int) = viewModelScope.launch { preferences.setFocusPreset(minutes) }
-    fun setBreakPreset(minutes: Int) = viewModelScope.launch { preferences.setBreakPreset(minutes) }
-    fun setLongBreak(minutes: Int) = viewModelScope.launch { preferences.setLongBreakMinutes(minutes) }
+
+    fun setBreakPreset(minutes: Int) = viewModelScope.launch {
+        preferences.setBreakPreset(minutes)
+        // Invariant: long break >= short break. Auto-raise long break if this made it invalid.
+        val currentLong = preferences.longBreakMinutes.first()
+        if (currentLong < minutes) {
+            preferences.setLongBreakMinutes(lowestLongBreakAtLeast(minutes))
+        }
+    }
+
+    fun setLongBreak(minutes: Int) = viewModelScope.launch {
+        // Never persist a long break below the short break (the UI also disables those chips).
+        val shortBreak = preferences.breakPresetMinutes.first()
+        preferences.setLongBreakMinutes(maxOf(minutes, shortBreak))
+    }
+
+    private fun lowestLongBreakAtLeast(minutes: Int): Int =
+        LONG_BREAK_OPTIONS.firstOrNull { it >= minutes } ?: LONG_BREAK_OPTIONS.last()
     fun setDarkOverride(value: Boolean?) = viewModelScope.launch { preferences.setDarkModeOverride(value) }
     fun setKeepScreenOn(value: Boolean) = viewModelScope.launch { preferences.setKeepScreenOn(value) }
     fun setAutoStartBreaks(value: Boolean) = viewModelScope.launch { preferences.setAutoStartBreaks(value) }
