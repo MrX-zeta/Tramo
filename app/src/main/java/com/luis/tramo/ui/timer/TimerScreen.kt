@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,11 +38,19 @@ import com.luis.tramo.timer.TimerStatus
 
 @Composable
 fun TimerScreen(
+    onOpenTasks: () -> Unit = {},
     viewModel: TimerViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Surface(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
+        TextButton(
+            onClick = onOpenTasks,
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
+        ) {
+            Text(stringResource(R.string.timer_open_tasks))
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -80,6 +89,7 @@ fun TimerScreen(
                 onSkip = viewModel::onSkip,
                 onStop = viewModel::onStop
             )
+        }
         }
     }
 }

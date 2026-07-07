@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.luis.tramo.ui.onboarding.OnboardingScreen
+import com.luis.tramo.ui.tasks.TaskListScreen
 import com.luis.tramo.ui.timer.TimerScreen
 
 @Composable
@@ -27,7 +28,12 @@ fun TramoNavHost(
             )
         }
         composable(TramoDestinations.TIMER) {
-            TimerScreen()
+            TimerScreen(
+                onOpenTasks = { navController.navigate(TramoDestinations.TASKS) }
+            )
+        }
+        composable(TramoDestinations.TASKS) {
+            TaskListScreen()
         }
     }
 }
