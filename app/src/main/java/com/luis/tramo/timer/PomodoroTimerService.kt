@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import com.luis.tramo.MainActivity
 import com.luis.tramo.R
 import com.luis.tramo.data.UserPreferencesRepository
+import com.luis.tramo.data.session.SessionRepository
 import com.luis.tramo.widget.PomodoroWidget
 import androidx.glance.appwidget.updateAll
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,6 +39,7 @@ class PomodoroTimerService : Service() {
 
     @Inject lateinit var stateHolder: TimerStateHolder
     @Inject lateinit var preferences: UserPreferencesRepository
+    @Inject lateinit var sessions: SessionRepository
 
     private val scope = CoroutineScope(SupervisorJob()) + Dispatchers.Default
     private var tickJob: Job? = null
@@ -112,6 +114,8 @@ class PomodoroTimerService : Service() {
 
     private suspend fun onSessionComplete() {
         val finished = stateHolder.state.value.sessionType
+        // Record the completed session for the daily/weekly/monthly report.
+        sessions.record(finished, finished.durationSeconds, System.currentTimeMillis())
         val focusCount = if (finished == SessionType.FOCUS) {
             preferences.incrementFocusSessions()
         } else {
