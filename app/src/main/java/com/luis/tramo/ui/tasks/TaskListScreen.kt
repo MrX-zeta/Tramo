@@ -32,6 +32,9 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.luis.tramo.navigation.TramoLargeTopBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,14 +56,20 @@ import com.luis.tramo.data.task.TaskEntity
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
+    bottomBar: @Composable () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: TaskListViewModel = hiltViewModel()
 ) {
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val tasks by viewModel.tasks.collectAsStateWithLifecycle()
     val showUpsell by viewModel.showProUpsell.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { TramoLargeTopBar(R.string.timer_open_tasks, onOpenSettings, scrollBehavior) },
+        bottomBar = bottomBar,
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Text("+", style = MaterialTheme.typography.headlineSmall)

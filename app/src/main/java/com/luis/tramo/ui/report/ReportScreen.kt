@@ -24,9 +24,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +46,7 @@ import java.time.format.DateTimeFormatter
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
+import com.luis.tramo.navigation.TramoLargeTopBar
 import com.luis.tramo.util.formatDuration
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -56,24 +59,27 @@ import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportScreen(
+    bottomBar: @Composable () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val heat by viewModel.heatmapState.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Surface(modifier = Modifier.fillMaxWidth()) {
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { TramoLargeTopBar(R.string.report_title, onOpenSettings, scrollBehavior) },
+        bottomBar = bottomBar
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = stringResource(R.string.report_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-
             // Lifetime stats.
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 LifetimeStatCard(

@@ -18,21 +18,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -48,89 +51,77 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
+import com.luis.tramo.navigation.TramoLargeTopBar
 import com.luis.tramo.timer.TimerStatus
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimerScreen(
-    onOpenTasks: () -> Unit = {},
-    onOpenReport: () -> Unit = {},
+    bottomBar: @Composable () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     viewModel: TimerViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     // Subtle entrance that matches the onboarding motion.
     var visible by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(Unit) { visible = true }
+    LaunchedEffect(Unit) { visible = true }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            TextButton(
-                onClick = onOpenReport,
-                modifier = Modifier.align(Alignment.TopStart).padding(8.dp)
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { TramoLargeTopBar(R.string.app_name, onOpenSettings, scrollBehavior) },
+        bottomBar = bottomBar
+    ) { innerPadding ->
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 6 }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(stringResource(R.string.timer_open_report))
-            }
-            Row(modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-                TextButton(onClick = onOpenSettings) {
-                    Text(stringResource(R.string.timer_open_settings))
-                }
-                TextButton(onClick = onOpenTasks) {
-                    Text(stringResource(R.string.timer_open_tasks))
-                }
-            }
+                Text(
+                    text = stringResource(state.sessionType.labelRes),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { it / 6 }
-            ) {
-                Column(
+                Spacer(Modifier.height(28.dp))
+                TimerRing(
+                    progress = state.progress,
+                    timeText = state.timeText,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp)
-                        .padding(top = 64.dp, bottom = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(state.sessionType.labelRes),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                        .fillMaxWidth(0.72f)
+                        .aspectRatio(1f)
+                )
 
-                    Spacer(Modifier.height(28.dp))
-                    TimerRing(
-                        progress = state.progress,
-                        timeText = state.timeText,
-                        modifier = Modifier
-                            .fillMaxWidth(0.72f)
-                            .aspectRatio(1f)
-                    )
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = stringResource(R.string.timer_sessions_today, state.completedFocusToday),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
 
-                    Spacer(Modifier.height(20.dp))
-                    Text(
-                        text = stringResource(R.string.timer_sessions_today, state.completedFocusToday),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Spacer(Modifier.height(28.dp))
+                Controls(
+                    isRunning = state.isRunning,
+                    canStop = state.status != TimerStatus.IDLE,
+                    onPlayPause = viewModel::onPlayPause,
+                    onSkip = viewModel::onSkip,
+                    onStop = viewModel::onStop
+                )
 
-                    Spacer(Modifier.height(28.dp))
-                    Controls(
-                        isRunning = state.isRunning,
-                        canStop = state.status != TimerStatus.IDLE,
-                        onPlayPause = viewModel::onPlayPause,
-                        onSkip = viewModel::onSkip,
-                        onStop = viewModel::onStop
-                    )
-
-                    Spacer(Modifier.weight(1f))
-                    StreakTasksCard(
-                        streak = state.streak,
-                        tasks = state.todaysTasks,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                Spacer(Modifier.weight(1f))
+                StreakTasksCard(
+                    streak = state.streak,
+                    tasks = state.todaysTasks,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
