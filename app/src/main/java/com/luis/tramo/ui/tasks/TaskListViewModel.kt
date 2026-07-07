@@ -8,6 +8,7 @@ import com.luis.tramo.data.task.TaskEntity
 import com.luis.tramo.data.task.TaskPriority
 import com.luis.tramo.data.task.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.DayOfWeek
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,7 +31,8 @@ data class NewTaskInput(
     val tags: List<String>,
     val subtasks: List<Subtask>,
     val isRecurring: Boolean,
-    val recurringDays: List<Int>
+    /** Domain weekdays; the ViewModel maps them to ISO ints at the persistence edge. */
+    val recurringDays: List<DayOfWeek>
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -75,7 +77,8 @@ class TaskListViewModel @Inject constructor(
                     iconEmoji = input.iconEmoji,
                     colorArgb = input.colorArgb,
                     isRecurring = input.isRecurring,
-                    recurringDays = input.recurringDays,
+                    // Persist ISO weekday numbers (1..7), never a UI list index.
+                    recurringDays = input.recurringDays.map { it.value }.sorted(),
                     createdAt = System.currentTimeMillis()
                 )
             )

@@ -17,7 +17,7 @@ data class TaskEntity(
     /** Custom card color; 0 falls back to the category color. */
     val colorArgb: Long = 0L,
     val isRecurring: Boolean = false,
-    /** Recurring days of week, 0 = Monday .. 6 = Sunday. */
+    /** Recurring days as ISO-8601 [java.time.DayOfWeek] values (1 = Monday .. 7 = Sunday). */
     val recurringDays: List<Int> = emptyList()
 ) {
     val completedSubtasks: Int get() = subtasks.count { it.done }
