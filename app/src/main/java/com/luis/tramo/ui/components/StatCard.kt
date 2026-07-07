@@ -2,7 +2,6 @@ package com.luis.tramo.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,7 +37,7 @@ fun StatCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(Spacing.lg),
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = value,
@@ -47,11 +46,13 @@ fun StatCard(
                 color = valueColor,
                 maxLines = 1
             )
-            Spacer(Modifier.height(Spacing.xs))
+            // Reserve two lines so a wrapping label never changes the value's position or the
+            // card's content height — every card in a row stays aligned.
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                minLines = 2,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
