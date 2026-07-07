@@ -11,6 +11,13 @@ val TramoOnPineContainer = Color(0xFF12191A)
  * primary/brand color or a button fill. Exposed via [com.luis.tramo.ui.theme.TramoTheme.progress]. */
 val TramoProgress = Color(0xFFE8B75D)
 
+// Dedicated cool slate-blue role for LOW priority — distinct from the green brand surfaces so the
+// chip never fades into a near-neutral background. Inverted between light and dark.
+val LowSlateContainerDark = Color(0xFF3A4A5A)
+val LowSlateOnContainerDark = Color(0xFFD3E1EF)
+val LowSlateContainerLight = Color(0xFFD4E0EC)
+val LowSlateOnContainerLight = Color(0xFF1D2A36)
+
 // --- Neutrals / surfaces ---
 val TramoBackgroundLight = Color(0xFFF5F3EE)
 val TramoBackgroundDark = Color(0xFF12191A)

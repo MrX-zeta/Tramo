@@ -60,6 +60,7 @@ import com.luis.tramo.data.task.Subtask
 import com.luis.tramo.data.task.TaskCategory
 import com.luis.tramo.data.task.TaskPriority
 import com.luis.tramo.ui.theme.TaskSwatches
+import com.luis.tramo.ui.theme.TramoTheme
 import java.time.DayOfWeek
 import java.time.temporal.WeekFields
 import java.util.Locale
@@ -338,9 +339,9 @@ private fun PriorityButton(
             container = MaterialTheme.colorScheme.tertiaryContainer
             content = MaterialTheme.colorScheme.onTertiaryContainer
         }
-        else -> { // LOW
-            container = MaterialTheme.colorScheme.surfaceVariant
-            content = MaterialTheme.colorScheme.onSurfaceVariant
+        else -> { // LOW — dedicated slate-blue role, distinct from the green surfaces.
+            container = TramoTheme.lowPriorityContainer
+            content = TramoTheme.onLowPriorityContainer
         }
     }
 

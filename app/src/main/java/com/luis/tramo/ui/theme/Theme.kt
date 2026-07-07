@@ -81,14 +81,34 @@ private val DarkColors = darkColorScheme(
 
 /** Tramo's extra theme values that don't fit a Material [androidx.compose.material3.ColorScheme] slot. */
 @Immutable
-data class TramoExtendedColors(val progress: Color)
+data class TramoExtendedColors(
+    val progress: Color,
+    val lowPriorityContainer: Color,
+    val onLowPriorityContainer: Color
+)
 
-private val LocalTramoColors = staticCompositionLocalOf { TramoExtendedColors(progress = TramoProgress) }
+private val LightExtended = TramoExtendedColors(
+    progress = TramoProgress,
+    lowPriorityContainer = LowSlateContainerLight,
+    onLowPriorityContainer = LowSlateOnContainerLight
+)
+
+private val DarkExtended = TramoExtendedColors(
+    progress = TramoProgress,
+    lowPriorityContainer = LowSlateContainerDark,
+    onLowPriorityContainer = LowSlateOnContainerDark
+)
+
+private val LocalTramoColors = staticCompositionLocalOf { LightExtended }
 
 /** Accessor for Tramo-specific theme values, e.g. `TramoTheme.progress`. */
 object TramoTheme {
     val progress: Color
         @Composable @ReadOnlyComposable get() = LocalTramoColors.current.progress
+    val lowPriorityContainer: Color
+        @Composable @ReadOnlyComposable get() = LocalTramoColors.current.lowPriorityContainer
+    val onLowPriorityContainer: Color
+        @Composable @ReadOnlyComposable get() = LocalTramoColors.current.onLowPriorityContainer
 }
 
 @Composable
@@ -98,7 +118,8 @@ fun TramoTheme(
 ) {
     // Fixed brand palette — dynamic color (Material You) is intentionally disabled.
     val colorScheme = if (darkTheme) DarkColors else LightColors
-    CompositionLocalProvider(LocalTramoColors provides TramoExtendedColors(progress = TramoProgress)) {
+    val extended = if (darkTheme) DarkExtended else LightExtended
+    CompositionLocalProvider(LocalTramoColors provides extended) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
