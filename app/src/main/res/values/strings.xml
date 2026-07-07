@@ -78,11 +78,12 @@
     <string name="report_session_count">Sessions</string>
     <string name="report_range_weekly">Weekly</string>
     <string name="report_range_monthly">Monthly</string>
-    <string name="report_chart_title">Focus intensity by hour (minutes)</string>
     <string name="report_total_completions">Total</string>
     <string name="report_current_streak">Current streak</string>
     <string name="report_longest_streak">Longest streak</string>
     <string name="report_activity_title">Activity</string>
+    <string name="report_total_sessions">Total sessions</string>
+    <string name="report_active_days">Active days</string>
     <string name="report_daily_chart_title">Focus minutes per day</string>
     <string name="report_empty_state">Start your first focus session</string>
 

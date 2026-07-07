@@ -53,7 +53,6 @@
     <string name="report_session_count">Sessões</string>
     <string name="report_range_weekly">Semanal</string>
     <string name="report_range_monthly">Mensal</string>
-    <string name="report_chart_title">Intensidade de foco por hora (minutos)</string>
     <string name="report_total_completions">Total</string>
     <string name="report_current_streak">Sequência atual</string>
     <string name="report_longest_streak">Recorde</string>

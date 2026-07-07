@@ -73,11 +73,12 @@
     <string name="report_session_count">Sesiones</string>
     <string name="report_range_weekly">Semanal</string>
     <string name="report_range_monthly">Mensual</string>
-    <string name="report_chart_title">Intensidad de concentración por hora (minutos)</string>
     <string name="report_total_completions">Total</string>
     <string name="report_current_streak">Racha actual</string>
     <string name="report_longest_streak">Racha máxima</string>
     <string name="report_activity_title">Actividad</string>
+    <string name="report_total_sessions">Sesiones totales</string>
+    <string name="report_active_days">Días activos</string>
     <string name="report_daily_chart_title">Minutos de concentración por día</string>
     <string name="report_empty_state">Empieza tu primera sesión de concentración</string>
 

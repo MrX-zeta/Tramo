@@ -3,30 +3,37 @@ package com.luis.tramo.ui.report
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,27 +44,37 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import java.time.LocalDate
+import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
-import com.luis.tramo.navigation.TramoLargeTopBar
 import com.luis.tramo.ui.components.StatCard
 import com.luis.tramo.ui.theme.Spacing
-import com.luis.tramo.ui.theme.TramoTheme
-import com.luis.tramo.util.formatDuration
+import com.luis.tramo.ui.theme.TabularFigures
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
 import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
+import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
+import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
+import com.patrykandpatrick.vico.compose.common.data.ExtraStore
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
 @Composable
 fun ReportScreen(
     bottomBar: @Composable () -> Unit = {},
@@ -66,11 +83,9 @@ fun ReportScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val heat by viewModel.heatmapState.collectAsStateWithLifecycle()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { TramoLargeTopBar(R.string.report_title, onOpenSettings, scrollBehavior) },
+        topBar = { ReportHeader(onOpenSettings) },
         bottomBar = bottomBar
     ) { innerPadding ->
         Column(
@@ -78,69 +93,35 @@ fun ReportScreen(
                 .fillMaxWidth()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(Spacing.lg),
+                .padding(horizontal = Spacing.lg)
+                .padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
-            // Lifetime stats. Streaks use the reserved progress accent.
+            // 1 — Two summary KPI cards.
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
                 StatCard(
                     value = heat.totalCompletions.toString(),
-                    label = stringResource(R.string.report_total_completions),
+                    label = stringResource(R.string.report_total_sessions),
                     valueColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
-                    value = heat.currentStreak.toString(),
-                    label = stringResource(R.string.report_current_streak),
-                    valueColor = TramoTheme.progress,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    value = heat.longestStreak.toString(),
-                    label = stringResource(R.string.report_longest_streak),
-                    valueColor = TramoTheme.progress,
+                    value = heat.activeDays.toString(),
+                    label = stringResource(R.string.report_active_days),
+                    valueColor = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // 12-week activity heatmap (with empty state).
+            // 2 — Activity heatmap.
             if (heat.totalCompletions == 0) {
-                Text(
-                    text = stringResource(R.string.report_activity_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text(stringResource(R.string.report_activity_title), style = MaterialTheme.typography.titleMedium)
                 ChartEmptyState()
             } else {
                 ActivityHeatmap(cells = heat.cells)
             }
 
-            // Today's totals.
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                StatCard(
-                    value = formatDuration(state.focusSeconds),
-                    label = stringResource(R.string.report_focus_time),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    value = formatDuration(state.breakSeconds),
-                    label = stringResource(R.string.report_break_time),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                StatCard(
-                    value = formatDuration(state.avgSessionSeconds),
-                    label = stringResource(R.string.report_avg_session),
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
-                    value = state.sessionCount.toString(),
-                    label = stringResource(R.string.report_session_count),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            // Weekly / Monthly toggle.
+            // 3 — Weekly / Monthly toggle + per-day bar chart.
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 val ranges = ReportRange.entries
                 ranges.forEachIndexed { index, range ->
@@ -153,8 +134,6 @@ fun ReportScreen(
                     }
                 }
             }
-
-            // Per-day focus-minutes bar chart (Semanal / Mensual).
             Text(
                 text = stringResource(R.string.report_daily_chart_title),
                 style = MaterialTheme.typography.titleMedium
@@ -164,25 +143,10 @@ fun ReportScreen(
             } else {
                 BarChart(
                     values = state.dailyMinutes,
+                    labels = state.dailyLabels,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp)
-                )
-            }
-
-            // Hourly focus-intensity chart.
-            Text(
-                text = stringResource(R.string.report_chart_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            if (state.hourlyMinutes.all { it == 0 }) {
-                ChartEmptyState()
-            } else {
-                BarChart(
-                    values = state.hourlyMinutes,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
                 )
             }
         }
@@ -190,11 +154,29 @@ fun ReportScreen(
 }
 
 @Composable
-private fun ChartEmptyState() {
-    ElevatedCard(
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
+private fun ReportHeader(onOpenSettings: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Text(
+            text = stringResource(R.string.report_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onOpenSettings) {
+            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.settings_title))
+        }
+    }
+}
+
+@Composable
+private fun ChartEmptyState() {
+    ElevatedCard(shape = RoundedCornerShape(Spacing.lg), modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -210,8 +192,6 @@ private fun ChartEmptyState() {
     }
 }
 
-private val HEATMAP_DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MMM d")
-
 @Composable
 private fun ActivityHeatmap(cells: List<HeatmapCell>) {
     var selected by remember { mutableStateOf<HeatmapCell?>(null) }
@@ -225,43 +205,74 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>) {
 
     val emptyColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     val primary = MaterialTheme.colorScheme.primary
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+
+    // Mon-first weekday labels, matching the cells' weekday-major order.
+    val dayLabels = remember {
+        (0L until 7L).map { DayOfWeek.MONDAY.plus(it).getDisplayName(TextStyle.NARROW, Locale.getDefault()) }
+    }
 
     Column {
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.report_activity_title),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f)
             )
-            selected?.let { cell ->
-                Text(
-                    text = "${cell.date.format(HEATMAP_DATE_FORMAT)} · ${cell.count}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = LocalDate.now().format(DATE_FORMAT),
+                style = MaterialTheme.typography.bodySmall,
+                color = onSurfaceVariant
+            )
         }
-        Spacer(Modifier.height(10.dp))
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(12),
-            userScrollEnabled = false,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(172.dp)
-                .alpha(gridAlpha)
-        ) {
-            items(cells) { cell ->
-                val color = if (cell.level == 0) emptyColor else primary.copy(alpha = ALPHA_BY_LEVEL[cell.level])
-                Box(
+        // Selected-day readout: DD/MM/AAAA + value.
+        Text(
+            text = selected?.let { "${it.date.format(DATE_FORMAT)} · ${it.count}" } ?: " ",
+            style = MaterialTheme.typography.bodySmall,
+            color = onSurfaceVariant,
+            modifier = Modifier.padding(top = Spacing.xs)
+        )
+        Spacer(Modifier.height(Spacing.sm))
+
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().alpha(gridAlpha)) {
+            val gap = 4.dp
+            val labelWidth = 18.dp
+            val gridWidth = maxWidth - labelWidth - Spacing.sm
+            val cell = (gridWidth - gap * 11) / 12 // square cell edge
+            Row {
+                Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                    dayLabels.forEach { label ->
+                        Box(Modifier.size(width = labelWidth, height = cell), contentAlignment = Alignment.CenterStart) {
+                            Text(label, style = MaterialTheme.typography.labelSmall, color = onSurfaceVariant)
+                        }
+                    }
+                }
+                Spacer(Modifier.width(Spacing.sm))
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(12),
+                    userScrollEnabled = false,
+                    horizontalArrangement = Arrangement.spacedBy(gap),
+                    verticalArrangement = Arrangement.spacedBy(gap),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(20.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(color)
-                        .clickable { selected = cell }
-                )
+                        .width(gridWidth)
+                        .height(cell * 7 + gap * 6)
+                ) {
+                    items(cells) { itemCell ->
+                        val isSelected = selected == itemCell
+                        val color = if (itemCell.level == 0) emptyColor else primary.copy(alpha = ALPHA_BY_LEVEL[itemCell.level])
+                        Box(
+                            modifier = Modifier
+                                .size(cell)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(color)
+                                .then(
+                                    if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(4.dp))
+                                    else Modifier
+                                )
+                                .clickable { selected = itemCell }
+                        )
+                    }
+                }
             }
         }
     }
@@ -269,22 +280,44 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>) {
 
 private val ALPHA_BY_LEVEL = floatArrayOf(0f, 0.4f, 0.6f, 0.8f, 1f)
 
+private val BarLabelKey = ExtraStore.Key<List<String>>()
+
+private val BarLabelFormatter = CartesianValueFormatter { context, x, _ ->
+    // Must never be blank — Vico throws on blank formatter output.
+    context.model.extraStore[BarLabelKey].getOrElse(x.toInt()) { "·" }.ifBlank { "·" }
+}
+
 @Composable
 private fun BarChart(
     values: List<Int>,
+    labels: List<String>,
     modifier: Modifier = Modifier
 ) {
+    val barColor = MaterialTheme.colorScheme.primary
+    val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // NOTE: the model transaction below drives Vico's built-in grow-in bar animation.
+    // This entrance animation is a protected asset — do not remove it.
     val modelProducer = remember { CartesianChartModelProducer() }
-    LaunchedEffect(values) {
+    LaunchedEffect(values, labels) {
         modelProducer.runTransaction {
             columnModel { series(values.ifEmpty { listOf(0) }) }
+            extras { it[BarLabelKey] = labels }
         }
     }
+    val column = rememberLineComponent(
+        fill = Fill(barColor),
+        thickness = 14.dp,
+        shape = RoundedCornerShape(topStartPercent = 40, topEndPercent = 40)
+    )
+    val label = rememberTextComponent(
+        style = androidx.compose.ui.text.TextStyle(color = axisColor, fontSize = 11.sp)
+    )
     CartesianChartHost(
         chart = rememberCartesianChart(
-            rememberColumnCartesianLayer(),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom()
+            rememberColumnCartesianLayer(ColumnCartesianLayer.ColumnProvider.series(column)),
+            // No gridlines: guideline = null on both axes; keep the axis baseline + Y labels.
+            startAxis = VerticalAxis.rememberStart(label = label, guideline = null),
+            bottomAxis = HorizontalAxis.rememberBottom(label = label, guideline = null, valueFormatter = BarLabelFormatter)
         ),
         modelProducer = modelProducer,
         modifier = modifier
