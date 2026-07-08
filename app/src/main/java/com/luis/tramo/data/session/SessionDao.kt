@@ -49,6 +49,16 @@ interface SessionDao {
     )
     fun focusDayStamps(): Flow<List<String>>
 
+    /** One-shot variant of [focusDayStamps], for a non-reactive snapshot read (e.g. the widget). */
+    @Query(
+        """
+        SELECT DISTINCT strftime('%Y-%m-%d', completedAt / 1000, 'unixepoch', 'localtime')
+        FROM session_records
+        WHERE type = 'FOCUS'
+        """
+    )
+    suspend fun focusDayStampsOnce(): List<String>
+
     /** Focus session counts per local day since [startMillis], for the activity heatmap. */
     @Query(
         """

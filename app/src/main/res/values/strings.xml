@@ -130,5 +130,5 @@
     <string name="upsell_dismiss">Maybe later</string>
 
     <!-- Widget -->
-    <string name="widget_description">Shows your ongoing Pomodoro timer</string>
+    <string name="widget_description">Your focus ring: today\'s sessions, daily goal and streak</string>
 </resources>

@@ -16,7 +16,7 @@ import com.luis.tramo.R
 import com.luis.tramo.data.ActiveSession
 import com.luis.tramo.data.UserPreferencesRepository
 import com.luis.tramo.data.session.SessionRepository
-import com.luis.tramo.widget.PomodoroWidget
+import com.luis.tramo.widget.TramoFocusWidget
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,7 +96,6 @@ class PomodoroTimerService : Service() {
             )
         }
         notificationManager().notify(NOTIFICATION_ID, buildOngoingNotification(state))
-        pushWidget()
     }
 
     private fun skip() {
@@ -116,7 +115,6 @@ class PomodoroTimerService : Service() {
         alarms.cancel()
         scope.launch {
             preferences.clearActiveSession()
-            PomodoroWidget().updateAll(applicationContext)
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -128,7 +126,6 @@ class PomodoroTimerService : Service() {
         scope.launch {
             preferences.clearActiveSession()
             stateHolder.set(freshSession(SessionType.FOCUS))
-            pushWidget()
         }
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -147,6 +144,8 @@ class PomodoroTimerService : Service() {
             val finished = stateHolder.state.value
             val finishedType = finished.sessionType
             sessions.record(finishedType, finished.totalSeconds, System.currentTimeMillis())
+            // A completed session changes today's count/streak — refresh the widget (not per-second).
+            TramoFocusWidget().updateAll(applicationContext)
             postCompletionNotification(finishedType, preferences.soundVibrationOnFinish.first())
 
             val before = preferences.sessionsBeforeLongBreak.first()
@@ -201,7 +200,6 @@ class PomodoroTimerService : Service() {
                 if (remaining != stateHolder.state.value.remainingSeconds) {
                     stateHolder.update { it.copy(remainingSeconds = remaining) }
                     notificationManager().notify(NOTIFICATION_ID, buildOngoingNotification(stateHolder.state.value))
-                    pushWidget()
                 }
                 if (remaining <= 0) {
                     handleComplete()
@@ -229,10 +227,6 @@ class PomodoroTimerService : Service() {
                 ActiveSession(type.name, totalSeconds, running = true, endEpochMillis = end, pausedRemaining = 0)
             )
         }
-    }
-
-    private fun pushWidget() {
-        scope.launch { PomodoroWidget().updateAll(applicationContext) }
     }
 
     /** Focus honors the current preset; the short break honors its preset; long break is fixed. */

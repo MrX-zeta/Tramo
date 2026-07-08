@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Focus-ring widget (dark). Green-charcoal surfaceContainer + lighter pine ring accent. -->
+    <color name="widget_background">#FF1D2725</color>
+    <color name="widget_ring">#FF8FCBD1</color>
+</resources>

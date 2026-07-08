@@ -95,5 +95,5 @@
     <string name="upsell_dismiss">Talvez depois</string>
 
     <!-- Widget -->
-    <string name="widget_description">Mostra seu temporizador Pomodoro em andamento</string>
+    <string name="widget_description">Seu anel de foco: sessões de hoje, meta diária e sequência</string>
 </resources>

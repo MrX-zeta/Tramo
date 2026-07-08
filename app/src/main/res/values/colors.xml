@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Focus-ring widget (light). surfaceContainer background + brand pine ring accent. -->
+    <color name="widget_background">#FFF0EEE6</color>
+    <color name="widget_ring">#FF2F5D62</color>
 </resources>

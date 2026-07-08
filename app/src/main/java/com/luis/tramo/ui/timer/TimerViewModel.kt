@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.luis.tramo.data.UserPreferencesRepository
 import com.luis.tramo.data.session.SessionRepository
+import com.luis.tramo.data.session.computeCurrentStreak
 import com.luis.tramo.data.task.TaskEntity
 import com.luis.tramo.data.task.TaskRepository
 import com.luis.tramo.timer.PomodoroTimerService
@@ -68,7 +69,7 @@ class TimerViewModel @Inject constructor(
         ) { timer, count, dayStamps, tasks, keepScreenOn ->
             timer.toUiState(
                 count = count,
-                streak = computeStreak(dayStamps),
+                streak = computeCurrentStreak(dayStamps, LocalDate.now()),
                 tasks = tasks.take(TASK_PREVIEW_LIMIT).map { it.toPreview() },
                 weekDots = computeWeekDots(dayStamps),
                 keepScreenOn = keepScreenOn && timer.status == TimerStatus.RUNNING
@@ -153,20 +154,6 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun TaskEntity.toPreview() = TaskPreview(emoji = iconEmoji, title = title)
-
-    /** Consecutive days (up to today, or yesterday if today is empty) with a focus session. */
-    private fun computeStreak(dayStamps: List<String>): Int {
-        val days = dayStamps.mapNotNull { runCatching { LocalDate.parse(it) }.getOrNull() }.toSet()
-        if (days.isEmpty()) return 0
-        val today = LocalDate.now()
-        var cursor = if (today in days) today else today.minusDays(1)
-        var streak = 0
-        while (cursor in days) {
-            streak++
-            cursor = cursor.minusDays(1)
-        }
-        return streak
-    }
 
     private companion object {
         const val TASK_PREVIEW_LIMIT = 3
