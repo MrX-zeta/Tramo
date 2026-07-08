@@ -10,18 +10,22 @@ import com.luis.tramo.data.task.TaskRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.DayOfWeek
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 enum class TaskFilter { ACTIVE, COMPLETED }
 
-/** All fields collected by the task-creation bottom sheet. */
+/** All fields collected by the task-creation/edit bottom sheet. */
 data class NewTaskInput(
     val title: String,
     val iconEmoji: String,
@@ -44,71 +48,113 @@ class TaskListViewModel @Inject constructor(
     private val _filter = MutableStateFlow(TaskFilter.ACTIVE)
     val filter: StateFlow<TaskFilter> = _filter.asStateFlow()
 
-    private val _showProUpsell = MutableStateFlow(false)
-    val showProUpsell: StateFlow<Boolean> = _showProUpsell.asStateFlow()
+    // Ids swiped-to-delete but still inside their undo window: hidden from the list, not yet removed
+    // from Room. The pending Room delete lives in [deleteJobs] so it survives UI recomposition.
+    private val _pendingDeletes = MutableStateFlow<Set<Long>>(emptySet())
+    private val deleteJobs = mutableMapOf<Long, Job>()
 
-    val tasks: StateFlow<List<TaskEntity>> = _filter
-        .flatMapLatest { filter ->
+    val tasks: StateFlow<List<TaskEntity>> = combine(
+        _filter.flatMapLatest { filter ->
             when (filter) {
                 TaskFilter.ACTIVE -> repository.activeTasks()
                 TaskFilter.COMPLETED -> repository.completedTasks()
             }
-        }
+        },
+        _pendingDeletes
+    ) { list, pending -> list.filter { it.id !in pending } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun selectFilter(filter: TaskFilter) {
         _filter.value = filter
     }
 
+    // Unlimited: no gating. (Monetization deferred — the former Pro 5-task limit is removed.)
     fun addTask(input: NewTaskInput) {
+        viewModelScope.launch { repository.add(input.toNewEntity()) }
+    }
+
+    /** Save an edit into the EXISTING row (id/createdAt/completion preserved), never a new task. */
+    fun saveEdit(task: TaskEntity, input: NewTaskInput) {
         viewModelScope.launch {
-            // TODO: gate by real Pro entitlement once billing exists.
-            if (repository.count() >= FREE_TASK_LIMIT) {
-                _showProUpsell.value = true
-                return@launch
+            // Preserve each unchanged subtask's done state (matched by title) so an edit never wipes progress.
+            val mergedSubtasks = input.subtasks.map { edited ->
+                task.subtasks.firstOrNull { it.title == edited.title }?.let { edited.copy(done = it.done) } ?: edited
             }
-            repository.add(
-                TaskEntity(
+            repository.update(
+                task.copy(
                     title = input.title.trim(),
                     category = input.category,
                     priority = input.priority,
                     tags = input.tags,
-                    subtasks = input.subtasks,
+                    subtasks = mergedSubtasks,
                     iconEmoji = input.iconEmoji,
                     colorArgb = input.colorArgb,
                     isRecurring = input.isRecurring,
-                    // Persist ISO weekday numbers (1..7), never a UI list index.
-                    recurringDays = input.recurringDays.map { it.value }.sorted(),
-                    createdAt = System.currentTimeMillis()
+                    recurringDays = input.recurringDays.map { it.value }.sorted()
                 )
             )
         }
     }
 
+    /**
+     * Swipe-right / checkbox. Completing an active task also marks its subtasks done (rollup);
+     * reopening a completed one flips it back to active. Tab-aware because [task.isCompleted] differs
+     * between the Activas and Completadas lists.
+     */
     fun toggleTaskCompleted(task: TaskEntity) {
+        val completing = !task.isCompleted
+        val subtasks =
+            if (completing && task.subtasks.isNotEmpty()) task.subtasks.map { it.copy(done = true) }
+            else task.subtasks
         viewModelScope.launch {
-            repository.update(task.copy(isCompleted = !task.isCompleted))
+            repository.update(task.copy(isCompleted = completing, subtasks = subtasks))
         }
     }
 
+    /** Toggle a subtask; completing the last one rolls the parent up to complete (and vice-versa). */
     fun toggleSubtask(task: TaskEntity, index: Int) {
         val updated = task.subtasks.toMutableList()
         val current = updated.getOrNull(index) ?: return
         updated[index] = current.copy(done = !current.done)
+        val allDone = updated.isNotEmpty() && updated.all { it.done }
         viewModelScope.launch {
-            repository.update(task.copy(subtasks = updated))
+            repository.update(task.copy(subtasks = updated, isCompleted = allDone))
         }
     }
 
-    fun deleteTask(task: TaskEntity) {
-        viewModelScope.launch { repository.delete(task) }
+    /** Swipe-left: hide the task immediately and commit the Room delete only after the undo window. */
+    fun deleteWithUndo(task: TaskEntity) {
+        _pendingDeletes.update { it + task.id }
+        deleteJobs.remove(task.id)?.cancel()
+        deleteJobs[task.id] = viewModelScope.launch {
+            delay(UNDO_WINDOW_MS)
+            repository.delete(task)
+            _pendingDeletes.update { it - task.id }
+            deleteJobs.remove(task.id)
+        }
     }
 
-    fun dismissProUpsell() {
-        _showProUpsell.value = false
+    /** "Deshacer": cancel the pending delete and restore the task in place. */
+    fun undoDelete(id: Long) {
+        deleteJobs.remove(id)?.cancel()
+        _pendingDeletes.update { it - id }
     }
+
+    private fun NewTaskInput.toNewEntity() = TaskEntity(
+        title = title.trim(),
+        category = category,
+        priority = priority,
+        tags = tags,
+        subtasks = subtasks,
+        iconEmoji = iconEmoji,
+        colorArgb = colorArgb,
+        isRecurring = isRecurring,
+        // Persist ISO weekday numbers (1..7), never a UI list index.
+        recurringDays = recurringDays.map { it.value }.sorted(),
+        createdAt = System.currentTimeMillis()
+    )
 
     companion object {
-        const val FREE_TASK_LIMIT = 5
+        const val UNDO_WINDOW_MS = 4000L
     }
 }

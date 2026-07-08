@@ -119,10 +119,11 @@
     <string name="priority_medium">Media</string>
     <string name="priority_high">Alta</string>
 
-    <string name="upsell_title">Hazte Pro</string>
-    <string name="upsell_message">El plan gratuito está limitado a %1$d tareas. Mejora a Pro para tareas ilimitadas.</string>
-    <string name="upsell_confirm">Mejorar</string>
-    <string name="upsell_dismiss">Quizás luego</string>
+    <string name="task_save">Guardar</string>
+    <string name="task_deleted">Tarea eliminada</string>
+    <string name="action_undo">Deshacer</string>
+    <string name="task_complete_action">Completar</string>
+    <string name="task_delete_action">Eliminar</string>
 
     <!-- Widget -->
     <string name="widget_description">Tu anillo de concentración: sesiones de hoy, meta diaria y racha</string>

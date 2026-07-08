@@ -89,10 +89,11 @@
     <string name="priority_medium">Mittel</string>
     <string name="priority_high">Hoch</string>
 
-    <string name="upsell_title">Pro werden</string>
-    <string name="upsell_message">Der kostenlose Plan ist auf %1$d Aufgaben begrenzt. Upgrade auf Pro für unbegrenzte Aufgaben.</string>
-    <string name="upsell_confirm">Upgrade</string>
-    <string name="upsell_dismiss">Vielleicht später</string>
+    <string name="task_save">Speichern</string>
+    <string name="task_deleted">Aufgabe gelöscht</string>
+    <string name="action_undo">Rückgängig</string>
+    <string name="task_complete_action">Erledigen</string>
+    <string name="task_delete_action">Löschen</string>
 
     <!-- Widget -->
     <string name="widget_description">Dein Fokus-Ring: heutige Sitzungen, Tagesziel und Serie</string>

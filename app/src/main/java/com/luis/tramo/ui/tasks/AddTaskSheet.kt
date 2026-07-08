@@ -58,6 +58,7 @@ import androidx.compose.ui.focus.FocusRequester
 import com.luis.tramo.R
 import com.luis.tramo.data.task.Subtask
 import com.luis.tramo.data.task.TaskCategory
+import com.luis.tramo.data.task.TaskEntity
 import com.luis.tramo.data.task.TaskPriority
 import com.luis.tramo.ui.theme.TaskSwatches
 import com.luis.tramo.ui.theme.TramoTheme
@@ -98,21 +99,27 @@ private fun String.splitToTrimmedList(): List<String> =
 @Composable
 fun AddTaskSheet(
     onDismiss: () -> Unit,
-    onConfirm: (NewTaskInput) -> Unit
+    onConfirm: (NewTaskInput) -> Unit,
+    // Non-null → EDIT mode: fields are pre-filled and the confirm button saves the existing row.
+    editing: TaskEntity? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val keyboard = LocalSoftwareKeyboardController.current
     val titleFocus = remember { FocusRequester() }
 
-    var title by remember { mutableStateOf("") }
-    var emoji by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(TaskCategory.WORK) }
-    var priority by remember { mutableStateOf(TaskPriority.MEDIUM) }
-    var colorArgb by remember { mutableStateOf(TaskSwatches.first()) }
-    var tagsText by remember { mutableStateOf("") }
-    var subtasksText by remember { mutableStateOf("") }
-    var recurring by remember { mutableStateOf(false) }
-    val recurringDays = remember { mutableStateListOf<DayOfWeek>() }
+    var title by remember { mutableStateOf(editing?.title ?: "") }
+    var emoji by remember { mutableStateOf(editing?.iconEmoji ?: "") }
+    var category by remember { mutableStateOf(editing?.category ?: TaskCategory.WORK) }
+    var priority by remember { mutableStateOf(editing?.priority ?: TaskPriority.MEDIUM) }
+    var colorArgb by remember { mutableStateOf(editing?.colorArgb?.takeIf { it != 0L } ?: TaskSwatches.first()) }
+    var tagsText by remember { mutableStateOf(editing?.tags?.joinToString(", ") ?: "") }
+    var subtasksText by remember { mutableStateOf(editing?.subtasks?.joinToString(", ") { it.title } ?: "") }
+    var recurring by remember { mutableStateOf(editing?.isRecurring ?: false) }
+    val recurringDays = remember {
+        mutableStateListOf<DayOfWeek>().apply {
+            editing?.recurringDays?.forEach { runCatching { DayOfWeek.of(it) }.getOrNull()?.let(::add) }
+        }
+    }
     val weekDays = remember { orderedWeekDays(Locale.getDefault()) }
 
     // Auto-open the keyboard on the title once the sheet has settled (less friction).
@@ -305,7 +312,7 @@ fun AddTaskSheet(
                 enabled = title.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.task_add_confirm))
+                Text(stringResource(if (editing != null) R.string.task_save else R.string.task_add_confirm))
             }
         }
     }
