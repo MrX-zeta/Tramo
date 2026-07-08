@@ -33,6 +33,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -109,7 +110,8 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
     val trackColor = if (night) 0xFF3A4642.toInt() else 0xFFDBE4E3.toInt() // dim surfaceVariant tone
     val ring = focusRingBitmap(ringPx, strokePx, data.progress, arcColor, trackColor)
 
-    val figureSize = (ringDpValue * 0.24f).coerceIn(13f, 20f).sp
+    val figureSize = (ringDpValue * 0.30f).coerceIn(15f, 26f).sp
+    val streakIconDp = (ringDpValue * 0.22f).coerceIn(16f, 24f).dp
 
     Column(
         modifier = GlanceModifier
@@ -134,18 +136,23 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
         if (showStreak) {
             Spacer(GlanceModifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "🔥 ", style = TextStyle(color = OnSurface, fontSize = 13.sp))
+                Image(
+                    provider = ImageProvider(R.drawable.ic_streak_fire),
+                    contentDescription = null,
+                    modifier = GlanceModifier.size(streakIconDp)
+                )
+                Spacer(GlanceModifier.width(4.dp))
                 Text(
                     text = data.streak.toString(),
-                    style = TextStyle(color = Amber, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    style = TextStyle(color = Amber, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 )
             }
         }
         if (showWordmark) {
-            Spacer(GlanceModifier.height(2.dp))
+            Spacer(GlanceModifier.height(3.dp))
             Text(
                 text = "Tramo",
-                style = TextStyle(color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
             )
         }
     }
