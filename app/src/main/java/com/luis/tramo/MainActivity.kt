@@ -35,7 +35,10 @@ class MainActivity : AppCompatActivity() {
             TramoTheme(darkTheme = darkOverride ?: isSystemInDarkTheme()) {
                 // Wait until the onboarded flag is read to avoid a wrong-screen flash.
                 startDestination?.let { destination ->
-                    TramoNavHost(startDestination = destination)
+                    // Debug-only: `--es screen <route>` opens straight to a screen for testing.
+                    val debuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                    val debugScreen = if (debuggable) intent.getStringExtra("screen") else null
+                    TramoNavHost(startDestination = debugScreen ?: destination)
                 }
             }
         }
