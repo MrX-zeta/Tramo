@@ -91,6 +91,7 @@
 
     <string name="task_save">Speichern</string>
     <string name="task_deleted">Aufgabe gelöscht</string>
+    <string name="task_completed">Aufgabe erledigt</string>
     <string name="action_undo">Rückgängig</string>
     <string name="task_complete_action">Erledigen</string>
     <string name="task_delete_action">Löschen</string>

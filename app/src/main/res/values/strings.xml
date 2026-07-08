@@ -126,6 +126,7 @@
 
     <string name="task_save">Save</string>
     <string name="task_deleted">Task deleted</string>
+    <string name="task_completed">Task completed</string>
     <string name="action_undo">Undo</string>
     <string name="task_complete_action">Complete</string>
     <string name="task_delete_action">Delete</string>

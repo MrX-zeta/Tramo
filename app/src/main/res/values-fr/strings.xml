@@ -91,6 +91,7 @@
 
     <string name="task_save">Enregistrer</string>
     <string name="task_deleted">Tâche supprimée</string>
+    <string name="task_completed">Tâche terminée</string>
     <string name="action_undo">Annuler</string>
     <string name="task_complete_action">Terminer</string>
     <string name="task_delete_action">Supprimer</string>

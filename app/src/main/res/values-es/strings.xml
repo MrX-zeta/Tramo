@@ -121,6 +121,7 @@
 
     <string name="task_save">Guardar</string>
     <string name="task_deleted">Tarea eliminada</string>
+    <string name="task_completed">Tarea completada</string>
     <string name="action_undo">Deshacer</string>
     <string name="task_complete_action">Completar</string>
     <string name="task_delete_action">Eliminar</string>

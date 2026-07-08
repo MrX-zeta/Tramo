@@ -91,6 +91,7 @@
 
     <string name="task_save">保存</string>
     <string name="task_deleted">タスクを削除しました</string>
+    <string name="task_completed">タスクを完了しました</string>
     <string name="action_undo">元に戻す</string>
     <string name="task_complete_action">完了</string>
     <string name="task_delete_action">削除</string>

@@ -98,6 +98,7 @@ fun TaskListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val deletedMessage = stringResource(R.string.task_deleted)
+    val completedMessage = stringResource(R.string.task_completed)
     val undoLabel = stringResource(R.string.action_undo)
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
@@ -144,7 +145,16 @@ fun TaskListScreen(
                             SwipeableTaskRow(
                                 task = task,
                                 reduceMotion = reduceMotion,
-                                onToggleCompleted = { viewModel.toggleTaskCompleted(task) },
+                                // Swipe-right completes only on Active; on Completed a task returns to
+                                // Active only by unchecking the checkbox (not by swipe).
+                                canComplete = filter == TaskFilter.ACTIVE,
+                                onSwipeComplete = {
+                                    viewModel.toggleTaskCompleted(task)
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(completedMessage, duration = SnackbarDuration.Short)
+                                    }
+                                },
+                                onToggleChecked = { viewModel.toggleTaskCompleted(task) },
                                 onEdit = { editingTask = task; showSheet = true },
                                 onToggleSubtask = { index -> viewModel.toggleSubtask(task, index) },
                                 onDelete = {
@@ -184,9 +194,11 @@ fun TaskListScreen(
 private fun LazyItemScope.SwipeableTaskRow(
     task: TaskEntity,
     reduceMotion: Boolean,
-    onToggleCompleted: () -> Unit,
+    canComplete: Boolean,
+    onSwipeComplete: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
+    onToggleChecked: () -> Unit,
     onToggleSubtask: (Int) -> Unit
 ) {
     lateinit var dismissState: SwipeToDismissBoxState
@@ -207,7 +219,7 @@ private fun LazyItemScope.SwipeableTaskRow(
     LaunchedEffect(dismissState.settledValue) {
         when (dismissState.settledValue) {
             SwipeToDismissBoxValue.StartToEnd -> {
-                onToggleCompleted()
+                onSwipeComplete()
                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
             SwipeToDismissBoxValue.EndToStart -> {
@@ -220,12 +232,14 @@ private fun LazyItemScope.SwipeableTaskRow(
     SwipeToDismissBox(
         state = dismissState,
         modifier = rowModifier,
+        // Complete-by-swipe is disabled on the Completed tab (reopen is checkbox-only there).
+        enableDismissFromStartToEnd = canComplete,
         backgroundContent = { SwipeBackground(dismissState, shape) }
     ) {
         TaskCard(
             task = task,
             onClick = onEdit,
-            onToggleCompleted = onToggleCompleted,
+            onToggleCompleted = onToggleChecked,
             onToggleSubtask = onToggleSubtask
         )
     }
@@ -289,31 +303,34 @@ private fun DrawScope.drawStretchCheck(progress: Float, color: Color) {
     drawPath(path, color, style = style)
 }
 
-/** A trash can whose lid rotates open (around its far end) as the delete swipe progresses. */
+/**
+ * A trash can whose lid lifts open (hinged at its right end) as the delete swipe progresses. The
+ * body sits low with clear air above it, so the closed lid rests just above the rim — never overlapping.
+ */
 private fun DrawScope.drawTrashCan(progress: Float, color: Color) {
     val w = size.width
     val h = size.height
-    val stroke = w * 0.09f
+    val stroke = w * 0.085f
     val cap = StrokeCap.Round
-    // Tapered can body.
+    val join = StrokeJoin.Round
+    // Tapered can body — lower half of the canvas.
     val body = Path().apply {
-        moveTo(0.27f * w, 0.40f * h)
-        lineTo(0.73f * w, 0.40f * h)
-        lineTo(0.66f * w, 0.92f * h)
-        lineTo(0.34f * w, 0.92f * h)
+        moveTo(0.29f * w, 0.48f * h)
+        lineTo(0.71f * w, 0.48f * h)
+        lineTo(0.64f * w, 0.92f * h)
+        lineTo(0.36f * w, 0.92f * h)
         close()
     }
-    drawPath(body, color, style = Stroke(width = stroke, cap = cap, join = StrokeJoin.Round))
-    drawLine(color, Offset(0.43f * w, 0.50f * h), Offset(0.41f * w, 0.84f * h), stroke * 0.7f, cap)
-    drawLine(color, Offset(0.57f * w, 0.50f * h), Offset(0.59f * w, 0.84f * h), stroke * 0.7f, cap)
-    // Lid + handle, lifting open around the right end.
-    val lidY = 0.31f * h
-    val pivot = Offset(0.86f * w, lidY)
-    rotate(degrees = -progress * 55f, pivot = pivot) {
-        drawLine(color, Offset(0.14f * w, lidY), Offset(0.86f * w, lidY), stroke, cap)
-        drawLine(color, Offset(0.40f * w, lidY), Offset(0.40f * w, 0.19f * h), stroke, cap)
-        drawLine(color, Offset(0.60f * w, lidY), Offset(0.60f * w, 0.19f * h), stroke, cap)
-        drawLine(color, Offset(0.40f * w, 0.19f * h), Offset(0.60f * w, 0.19f * h), stroke, cap)
+    drawPath(body, color, style = Stroke(width = stroke, cap = cap, join = join))
+    drawLine(color, Offset(0.45f * w, 0.58f * h), Offset(0.43f * w, 0.84f * h), stroke * 0.6f, cap)
+    drawLine(color, Offset(0.55f * w, 0.58f * h), Offset(0.57f * w, 0.84f * h), stroke * 0.6f, cap)
+    // Lid bar + small handle, hinged at the right end so it swings up and away from the body.
+    val lidY = 0.42f * h
+    rotate(degrees = -progress * 60f, pivot = Offset(0.76f * w, lidY)) {
+        drawLine(color, Offset(0.24f * w, lidY), Offset(0.76f * w, lidY), stroke, cap)
+        drawLine(color, Offset(0.44f * w, lidY), Offset(0.44f * w, 0.31f * h), stroke * 0.85f, cap)
+        drawLine(color, Offset(0.56f * w, lidY), Offset(0.56f * w, 0.31f * h), stroke * 0.85f, cap)
+        drawLine(color, Offset(0.44f * w, 0.31f * h), Offset(0.56f * w, 0.31f * h), stroke * 0.85f, cap)
     }
 }
 

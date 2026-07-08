@@ -91,6 +91,7 @@
 
     <string name="task_save">Salvar</string>
     <string name="task_deleted">Tarefa excluída</string>
+    <string name="task_completed">Tarefa concluída</string>
     <string name="action_undo">Desfazer</string>
     <string name="task_complete_action">Concluir</string>
     <string name="task_delete_action">Excluir</string>
