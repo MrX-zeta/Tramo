@@ -1,6 +1,7 @@
 package com.luis.tramo.ui.timer
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -102,6 +103,7 @@ fun TimerScreen(
             ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
                 TimerSessionCard(
                     state = state,
+                    reduceMotion = reduceMotion,
                     onPlayPause = viewModel::onPlayPause,
                     onSkip = viewModel::onSkip,
                     onStop = viewModel::onStop
@@ -141,6 +143,7 @@ private fun TimerHeader(onOpenSettings: () -> Unit) {
 @Composable
 private fun TimerSessionCard(
     state: TimerUiState,
+    reduceMotion: Boolean,
     onPlayPause: () -> Unit,
     onSkip: () -> Unit,
     onStop: () -> Unit
@@ -162,6 +165,8 @@ private fun TimerSessionCard(
             TimerRing(
                 progress = state.progress,
                 timeText = state.timeText,
+                running = state.isRunning,
+                reduceMotion = reduceMotion,
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
                     .aspectRatio(1f)
@@ -274,6 +279,8 @@ private fun TasksCard(tasks: List<TaskPreview>) {
 private fun TimerRing(
     progress: Float,
     timeText: String,
+    running: Boolean,
+    reduceMotion: Boolean,
     modifier: Modifier = Modifier
 ) {
     val animatedProgress by animateFloatAsState(
@@ -281,6 +288,14 @@ private fun TimerRing(
         animationSpec = tween(durationMillis = 500),
         label = "ringProgress"
     )
+    // The product's single glass moment: a soft teal glow behind the number, ONLY while running.
+    // A radial gradient (no live blur) — cheap enough to sit behind the per-second ticking number.
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (running) 1f else 0f,
+        animationSpec = if (reduceMotion) snap() else tween(durationMillis = 500),
+        label = "ringGlow"
+    )
+    val glowColor = MaterialTheme.colorScheme.primary
     val trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
     val ringBrush = Brush.sweepGradient(
         listOf(
@@ -292,6 +307,21 @@ private fun TimerRing(
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            if (glowAlpha > 0f) {
+                val glowRadius = size.minDimension * 0.42f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            glowColor.copy(alpha = 0.16f * glowAlpha),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = glowRadius
+                    ),
+                    radius = glowRadius,
+                    center = center
+                )
+            }
             val stroke = 22.dp.toPx()
             val inset = stroke / 2
             val arcSize = Size(size.width - stroke, size.height - stroke)
