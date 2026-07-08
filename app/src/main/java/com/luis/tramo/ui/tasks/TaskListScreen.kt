@@ -1,8 +1,10 @@
 package com.luis.tramo.ui.tasks
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +24,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowUp
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Checkbox
@@ -52,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,10 +86,13 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.data.task.TaskEntity
+import com.luis.tramo.data.task.TaskPriority
 import com.luis.tramo.navigation.TramoTopBar
 import com.luis.tramo.ui.components.ScreenEntrance
 import com.luis.tramo.ui.components.rememberReduceMotion
 import com.luis.tramo.ui.theme.TramoTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private const val COMPLETE_THRESHOLD = 0.28f
@@ -102,11 +113,46 @@ fun TaskListScreen(
     val reduceMotion = rememberReduceMotion()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    var restoredTaskId by remember { mutableStateOf<Long?>(null) }
     val deletedMessage = stringResource(R.string.task_deleted)
     val completedMessage = stringResource(R.string.task_completed)
+    val reopenedMessage = stringResource(R.string.task_reopened)
     val undoLabel = stringResource(R.string.action_undo)
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
+    // One consistent "completed" snackbar (with undo) for every path: checkbox, swipe, or the last
+    // subtask rolling the task up to done.
+    LaunchedEffect(Unit) {
+        viewModel.taskCompleted.collect { original ->
+            val result = snackbarHostState.showSnackbar(
+                message = completedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) viewModel.restoreTask(original)
+        }
+    }
+    // Symmetric feedback when a task is reopened (unchecked box or subtask) — undo re-completes it.
+    LaunchedEffect(Unit) {
+        viewModel.taskReopened.collect { original ->
+            val result = snackbarHostState.showSnackbar(
+                message = reopenedMessage,
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) viewModel.restoreTask(original)
+        }
+    }
+    // When a delete is undone, wait for the task to return to the list, scroll it into view, and
+    // hold long enough for its restore "pop" to play before clearing the flag.
+    LaunchedEffect(restoredTaskId) {
+        val id = restoredTaskId ?: return@LaunchedEffect
+        val index = snapshotFlow { tasks.indexOfFirst { it.id == id } }.first { it >= 0 }
+        listState.animateScrollToItem(index)
+        delay(1100)
+        restoredTaskId = null
+    }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { TramoTopBar(R.string.timer_open_tasks, onOpenSettings, scrollBehavior) },
@@ -140,6 +186,7 @@ fun TaskListScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -149,12 +196,8 @@ fun TaskListScreen(
                                 task = task,
                                 reduceMotion = reduceMotion,
                                 canComplete = filter == TaskFilter.ACTIVE,
-                                onSwipeComplete = {
-                                    viewModel.toggleTaskCompleted(task)
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(completedMessage, duration = SnackbarDuration.Short)
-                                    }
-                                },
+                                isJustRestored = task.id == restoredTaskId,
+                                onSwipeComplete = { viewModel.toggleTaskCompleted(task) },
                                 onToggleChecked = { viewModel.toggleTaskCompleted(task) },
                                 onEdit = { editingTask = task; showSheet = true },
                                 onToggleSubtask = { index -> viewModel.toggleSubtask(task, index) },
@@ -166,7 +209,10 @@ fun TaskListScreen(
                                             actionLabel = undoLabel,
                                             duration = SnackbarDuration.Short
                                         )
-                                        if (result == SnackbarResult.ActionPerformed) viewModel.undoDelete(task.id)
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.undoDelete(task.id)
+                                            restoredTaskId = task.id
+                                        }
                                     }
                                 }
                             )
@@ -195,6 +241,7 @@ private fun LazyItemScope.SwipeableTaskRow(
     task: TaskEntity,
     reduceMotion: Boolean,
     canComplete: Boolean,
+    isJustRestored: Boolean,
     onSwipeComplete: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit,
@@ -210,6 +257,20 @@ private fun LazyItemScope.SwipeableTaskRow(
     )
     val shape = RoundedCornerShape(16.dp)
     val rowModifier = if (reduceMotion) Modifier else Modifier.animateItem()
+
+    // Grow-pulse when this row was just restored from an undo. A short lead-in lets the auto-scroll
+    // settle first, so the sequence reads as: scroll into view → the card "pops".
+    val restorePulse = remember { Animatable(1f) }
+    LaunchedEffect(isJustRestored) {
+        if (isJustRestored && !reduceMotion) {
+            restorePulse.snapTo(1f)
+            delay(350)
+            repeat(2) {
+                restorePulse.animateTo(1.06f, tween(160))
+                restorePulse.animateTo(1f, tween(160))
+            }
+        }
+    }
 
     val crossed = dismissState.targetValue == SwipeToDismissBoxValue.EndToStart
     val lidRotation by animateFloatAsState(
@@ -247,12 +308,19 @@ private fun LazyItemScope.SwipeableTaskRow(
         enableDismissFromStartToEnd = canComplete,
         backgroundContent = { SwipeBackground(dismissState, shape, lidRotation, checkProgress) }
     ) {
-        TaskCard(
-            task = task,
-            onClick = onEdit,
-            onToggleCompleted = onToggleChecked,
-            onToggleSubtask = onToggleSubtask
-        )
+        Box(
+            modifier = Modifier.graphicsLayer {
+                scaleX = restorePulse.value
+                scaleY = restorePulse.value
+            }
+        ) {
+            TaskCard(
+                task = task,
+                onClick = onEdit,
+                onToggleCompleted = onToggleChecked,
+                onToggleSubtask = onToggleSubtask
+            )
+        }
     }
 }
 
@@ -436,13 +504,45 @@ private fun TaskCard(
 
 @Composable
 private fun PriorityBadge(task: TaskEntity) {
-    Text(
-        text = stringResource(task.priority.labelRes),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 8.dp)
-    )
+    // Distinct colour + icon per priority: HIGH reads as urgent (red, arrows up), MEDIUM as an
+    // accent (arrows level), LOW as neutral (muted, arrows down). Container roles adapt to theme.
+    val bg: Color
+    val fg: Color
+    val icon: ImageVector
+    when (task.priority) {
+        TaskPriority.HIGH -> {
+            bg = MaterialTheme.colorScheme.errorContainer
+            fg = MaterialTheme.colorScheme.onErrorContainer
+            icon = Icons.Filled.KeyboardDoubleArrowUp
+        }
+        TaskPriority.MEDIUM -> {
+            bg = MaterialTheme.colorScheme.tertiaryContainer
+            fg = MaterialTheme.colorScheme.onTertiaryContainer
+            icon = Icons.Filled.DragHandle
+        }
+        TaskPriority.LOW -> {
+            bg = MaterialTheme.colorScheme.surfaceVariant
+            fg = MaterialTheme.colorScheme.onSurfaceVariant
+            icon = Icons.Filled.KeyboardDoubleArrowDown
+        }
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(horizontal = 6.dp)
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(14.dp))
+        Spacer(Modifier.width(3.dp))
+        Text(
+            text = stringResource(task.priority.labelRes),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = fg
+        )
+    }
 }
 
 private fun TaskFilter.labelRes(): Int = when (this) {

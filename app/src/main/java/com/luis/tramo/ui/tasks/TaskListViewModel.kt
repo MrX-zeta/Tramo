@@ -12,9 +12,11 @@ import java.time.DayOfWeek
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -52,6 +54,16 @@ class TaskListViewModel @Inject constructor(
     // from Room. The pending Room delete lives in [deleteJobs] so it survives UI recomposition.
     private val _pendingDeletes = MutableStateFlow<Set<Long>>(emptySet())
     private val deleteJobs = mutableMapOf<Long, Job>()
+
+    // Emits the pre-completion task whenever one transitions to done — by checkbox, swipe, or the
+    // last subtask rolling up — so the screen shows one consistent "completed" snackbar with undo.
+    private val _taskCompleted = MutableSharedFlow<TaskEntity>(extraBufferCapacity = 1)
+    val taskCompleted = _taskCompleted.asSharedFlow()
+
+    // Symmetric event for the reverse transition (completed → active), so reopening a task — by
+    // unchecking its box or a subtask — also gives feedback.
+    private val _taskReopened = MutableSharedFlow<TaskEntity>(extraBufferCapacity = 1)
+    val taskReopened = _taskReopened.asSharedFlow()
 
     val tasks: StateFlow<List<TaskEntity>> = combine(
         _filter.flatMapLatest { filter ->
@@ -108,6 +120,7 @@ class TaskListViewModel @Inject constructor(
             else task.subtasks
         viewModelScope.launch {
             repository.update(task.copy(isCompleted = completing, subtasks = subtasks))
+            if (completing) _taskCompleted.emit(task) else _taskReopened.emit(task)
         }
     }
 
@@ -117,9 +130,18 @@ class TaskListViewModel @Inject constructor(
         val current = updated.getOrNull(index) ?: return
         updated[index] = current.copy(done = !current.done)
         val allDone = updated.isNotEmpty() && updated.all { it.done }
+        val justCompleted = allDone && !task.isCompleted
+        val justReopened = !allDone && task.isCompleted
         viewModelScope.launch {
             repository.update(task.copy(subtasks = updated, isCompleted = allDone))
+            if (justCompleted) _taskCompleted.emit(task)
+            else if (justReopened) _taskReopened.emit(task)
         }
+    }
+
+    /** Restore a task to a prior snapshot — used to undo a completion (reopens + restores subtasks). */
+    fun restoreTask(task: TaskEntity) {
+        viewModelScope.launch { repository.update(task) }
     }
 
     /** Swipe-left: hide the task immediately and commit the Room delete only after the undo window. */
