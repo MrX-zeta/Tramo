@@ -54,8 +54,20 @@ fun TramoNavHost(
         composable(TramoDestinations.REPORT) {
             ReportScreen(bottomBar = bottomBar, onOpenSettings = openSettings)
         }
-        composable(TramoDestinations.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+        composable(
+            route = "${TramoDestinations.SETTINGS}?highlight={highlight}",
+            arguments = listOf(
+                androidx.navigation.navArgument("highlight") {
+                    type = androidx.navigation.NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entry ->
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                highlight = entry.arguments?.getString("highlight")
+            )
         }
     }
 }

@@ -2,6 +2,8 @@ package com.luis.tramo.ui.settings
 
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -56,6 +58,8 @@ import com.luis.tramo.ui.components.ScreenEntrance
 import com.luis.tramo.ui.components.rememberReduceMotion
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -74,12 +78,25 @@ import com.luis.tramo.ui.theme.TabularFigures
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit = {},
+    highlight: String? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showLanguageDialog by remember { mutableStateOf(false) }
     val reduceMotion = rememberReduceMotion()
     var visible by remember { mutableStateOf(false) }
+    val goalPulse = remember { Animatable(0f) }
+    LaunchedEffect(highlight) {
+        if (highlight == "daily_goal") {
+            goalPulse.snapTo(0f)
+            // Let the card's entrance animation settle before drawing the eye to the goal row.
+            kotlinx.coroutines.delay(500)
+            repeat(3) {
+                goalPulse.animateTo(1f, tween(220))
+                goalPulse.animateTo(0f, tween(220))
+            }
+        }
+    }
     LaunchedEffect(Unit) { visible = true }
 
     Scaffold { innerPadding ->
@@ -103,7 +120,8 @@ fun SettingsScreen(
                 PreferencesCard(
                     state = state,
                     viewModel = viewModel,
-                    onOpenLanguage = { showLanguageDialog = true }
+                    onOpenLanguage = { showLanguageDialog = true },
+                    goalHighlight = goalPulse.value
                 )
             }
         }
@@ -287,7 +305,8 @@ private fun ChipRow(
 private fun PreferencesCard(
     state: SettingsUiState,
     viewModel: SettingsViewModel,
-    onOpenLanguage: () -> Unit
+    onOpenLanguage: () -> Unit,
+    goalHighlight: Float = 0f
 ) {
     val context = LocalContext.current
     val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -346,7 +365,8 @@ private fun PreferencesCard(
         PreferenceRow(
             icon = Icons.Filled.Flag,
             title = stringResource(R.string.settings_daily_goal),
-            subtitle = stringResource(R.string.settings_daily_goal_subtitle)
+            subtitle = stringResource(R.string.settings_daily_goal_subtitle),
+            highlight = goalHighlight
         ) {
             Stepper(
                 value = state.dailyGoal,
@@ -399,12 +419,24 @@ private fun PreferenceRow(
     title: String,
     subtitle: String?,
     onClick: (() -> Unit)? = null,
+    highlight: Float = 0f,
     trailing: @Composable () -> Unit
 ) {
+    val highlightColor = MaterialTheme.colorScheme.primaryContainer
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .drawBehind {
+                if (highlight > 0f) {
+                    val r = Spacing.sm.toPx()
+                    drawRoundRect(
+                        color = highlightColor,
+                        alpha = highlight.coerceIn(0f, 1f),
+                        cornerRadius = CornerRadius(r, r)
+                    )
+                }
+            }
             .padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
