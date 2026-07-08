@@ -1,6 +1,8 @@
 package com.luis.tramo.ui.report
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +24,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -45,9 +47,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -167,13 +169,13 @@ fun ReportScreen(
             }
             item {
                 // Wide: the activity map spans the full width.
-                HeatmapCard(cells = heat.cells, columnLabels = heat.columnLabels)
+                HeatmapCard(cells = heat.cells, columnLabels = heat.columnLabels, reduceMotion = reduceMotion)
             }
             item {
-                OverviewCard(state = state, onSelectRange = viewModel::selectRange)
+                OverviewCard(state = state, onSelectRange = viewModel::selectRange, reduceMotion = reduceMotion)
             }
             item {
-                MonthlyCard(monthly = monthly)
+                MonthlyCard(monthly = monthly, reduceMotion = reduceMotion)
             }
         }
     }
@@ -242,7 +244,7 @@ private fun BreakdownItem(label: String, value: String, dotColor: androidx.compo
 // --- Card 2: Semanal/Mensual overview with stats + per-day chart ---
 
 @Composable
-private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> Unit) {
+private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> Unit, reduceMotion: Boolean) {
     ElevatedCard(shape = CARD_SHAPE, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             // Title on its own row; toggle on the row below (never overlaps the title).
@@ -280,7 +282,8 @@ private fun OverviewCard(state: ReportUiState, onSelectRange: (ReportRange) -> U
                 BarChart(
                     values = state.dailyMinutes,
                     labels = state.dailyLabels,
-                    modifier = Modifier.fillMaxWidth().height(264.dp)
+                    modifier = Modifier.fillMaxWidth().height(232.dp),
+                    reduceMotion = reduceMotion
                 )
             }
         }
@@ -316,7 +319,7 @@ private fun RowScope.StatColumn(value: String, label: String) {
 // --- Card 4: heatmap ---
 
 @Composable
-private fun HeatmapCard(cells: List<HeatmapCell>, columnLabels: List<String>) {
+private fun HeatmapCard(cells: List<HeatmapCell>, columnLabels: List<String>, reduceMotion: Boolean) {
     ElevatedCard(shape = CARD_SHAPE, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             if (cells.all { it.count == 0 }) {
@@ -324,22 +327,28 @@ private fun HeatmapCard(cells: List<HeatmapCell>, columnLabels: List<String>) {
                 Spacer(Modifier.height(Spacing.sm))
                 EmptyChartText()
             } else {
-                ActivityHeatmap(cells = cells, columnLabels = columnLabels)
+                ActivityHeatmap(cells = cells, columnLabels = columnLabels, reduceMotion = reduceMotion)
             }
         }
     }
 }
 
 @Composable
-private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>) {
+private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>, reduceMotion: Boolean) {
     var selected by remember { mutableStateOf<HeatmapCell?>(null) }
-    var loaded by remember { mutableStateOf(false) }
-    LaunchedEffect(cells) { if (cells.isNotEmpty()) loaded = true }
-    val gridAlpha by animateFloatAsState(
-        targetValue = if (loaded) 1f else 0f,
-        animationSpec = tween(700),
-        label = "heatmapAlpha"
-    )
+    // Positional sweep: one time-driven value (ms). Each cell derives its own progress from its COLUMN
+    // (week) index, so the map fills left-to-right — chronological, matching how a heatmap is read —
+    // as a single directional wave. Re-runs on every data/view change (keyed on cells) and when the
+    // card re-enters composition. Every cell sweeps in equally to its real colour (no intensity order).
+    val sweep = remember { Animatable(0f) }
+    LaunchedEffect(cells, reduceMotion) {
+        if (reduceMotion) {
+            sweep.snapTo(SWEEP_TOTAL_MS)
+        } else {
+            sweep.snapTo(0f)
+            sweep.animateTo(SWEEP_TOTAL_MS, tween(SWEEP_TOTAL_MS.toInt(), easing = LinearEasing))
+        }
+    }
 
     val emptyColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
     val primary = MaterialTheme.colorScheme.primary
@@ -370,7 +379,7 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
         )
         Spacer(Modifier.height(Spacing.sm))
 
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth().alpha(gridAlpha)) {
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val gap = 4.dp
             val labelWidth = 18.dp
             val gridWidth = maxWidth - labelWidth - Spacing.sm
@@ -392,12 +401,24 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
                         verticalArrangement = Arrangement.spacedBy(gap),
                         modifier = Modifier.width(gridWidth).height(cell * 7 + gap * 6)
                     ) {
-                        items(cells) { itemCell ->
+                        itemsIndexed(cells) { index, itemCell ->
                             val isSelected = selected == itemCell
                             val color = if (itemCell.level == 0) emptyColor else primary.copy(alpha = ALPHA_BY_LEVEL[itemCell.level])
+                            // Cells are weekday-major, so the column (week) index is index % 12. Reading
+                            // sweep.value inside graphicsLayer keeps the wave in the draw phase (no
+                            // per-frame recomposition of the 84 cells).
+                            val column = index % HEATMAP_COLUMNS
                             Box(
                                 modifier = Modifier
                                     .size(cell)
+                                    .graphicsLayer {
+                                        val local = ((sweep.value - column * SWEEP_COLUMN_DELAY_MS) / SWEEP_CELL_MS)
+                                            .coerceIn(0f, 1f)
+                                        val eased = FastOutSlowInEasing.transform(local)
+                                        alpha = eased
+                                        scaleX = 0.8f + 0.2f * eased
+                                        scaleY = 0.8f + 0.2f * eased
+                                    }
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(color)
                                     .then(
@@ -435,10 +456,17 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
 
 private val ALPHA_BY_LEVEL = floatArrayOf(0f, 0.4f, 0.6f, 0.8f, 1f)
 
+// Heatmap positional sweep: 12 columns, ~16ms per column, each cell fades+scales over ~220ms, so the
+// wave crosses the whole map in 11*16 + 220 = 396ms.
+private const val HEATMAP_COLUMNS = 12
+private const val SWEEP_COLUMN_DELAY_MS = 34f
+private const val SWEEP_CELL_MS = 460f
+private const val SWEEP_TOTAL_MS = (HEATMAP_COLUMNS - 1) * SWEEP_COLUMN_DELAY_MS + SWEEP_CELL_MS
+
 // --- Card 5: monthly sessions ---
 
 @Composable
-private fun MonthlyCard(monthly: MonthlyUiState) {
+private fun MonthlyCard(monthly: MonthlyUiState, reduceMotion: Boolean) {
     ElevatedCard(shape = CARD_SHAPE, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(Spacing.xl)) {
             // Title with an inline unit caption ("· sesiones"): kept on the title's row (rather than a
@@ -466,7 +494,8 @@ private fun MonthlyCard(monthly: MonthlyUiState) {
                     yLabelSize = 12.sp,
                     yLabelGap = 8.dp,
                     yStep = niceYStep(monthly.counts.maxOrNull() ?: 0),
-                    hideAxisLines = true
+                    hideAxisLines = true,
+                    reduceMotion = reduceMotion
                 )
             }
         }
@@ -501,7 +530,8 @@ private fun BarChart(
     yLabelSize: TextUnit = 11.sp,
     yLabelGap: Dp = 0.dp,
     yStep: Double? = null,
-    hideAxisLines: Boolean = false
+    hideAxisLines: Boolean = false,
+    reduceMotion: Boolean = false
 ) {
     val barColor = MaterialTheme.colorScheme.primary
     val axisColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -557,7 +587,9 @@ private fun BarChart(
             )
         ),
         modelProducer = modelProducer,
-        modifier = modifier
+        modifier = modifier,
+        // Bars grow in from the baseline (Vico's default 500ms diff spec); reduced motion = instant.
+        animationSpec = if (reduceMotion) null else tween(durationMillis = 500)
     )
 }
 
