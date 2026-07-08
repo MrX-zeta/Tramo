@@ -302,7 +302,10 @@ class PomodoroTimerService : Service() {
                 .apply { setShowBadge(false) }
         )
         manager.createNotificationChannel(
+            // HIGH importance sounds by default; enable vibration explicitly so the "sound AND
+            // vibration" toggle is honoured (a channel's settings lock after first creation).
             NotificationChannel(ALERT_CHANNEL, getString(R.string.timer_alert_channel_name), NotificationManager.IMPORTANCE_HIGH)
+                .apply { enableVibration(true) }
         )
     }
 
@@ -330,10 +333,15 @@ class PomodoroTimerService : Service() {
         private const val COMPLETION_NOTIFICATION_ID = 1002
         private const val TICK_INTERVAL_MS = 250L
 
-        /** After a break, back to focus; after focus, a long break every [sessionsBeforeLong] sessions. */
+        /**
+         * After a break, back to focus; after focus, a long break every [sessionsBeforeLong]
+         * sessions. The `focusCount > 0` guard matters when skipping: a skipped focus isn't recorded,
+         * so skipping the day's first focus leaves focusCount at 0 — without the guard `0 % N == 0`
+         * would wrongly jump straight to the long break instead of the short one.
+         */
         fun nextSessionType(current: SessionType, focusCount: Int, sessionsBeforeLong: Int): SessionType = when {
             current != SessionType.FOCUS -> SessionType.FOCUS
-            sessionsBeforeLong > 0 && focusCount % sessionsBeforeLong == 0 -> SessionType.LONG_BREAK
+            sessionsBeforeLong > 0 && focusCount > 0 && focusCount % sessionsBeforeLong == 0 -> SessionType.LONG_BREAK
             else -> SessionType.SHORT_BREAK
         }
 
