@@ -16,7 +16,7 @@ import com.luis.tramo.R
 import com.luis.tramo.data.ActiveSession
 import com.luis.tramo.data.UserPreferencesRepository
 import com.luis.tramo.data.session.SessionRepository
-import com.luis.tramo.widget.TramoFocusWidget
+import com.luis.tramo.widget.WidgetUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +44,7 @@ class PomodoroTimerService : Service() {
     @Inject lateinit var stateHolder: TimerStateHolder
     @Inject lateinit var preferences: UserPreferencesRepository
     @Inject lateinit var sessions: SessionRepository
+    @Inject lateinit var widgetUpdater: WidgetUpdater
 
     private val scope = CoroutineScope(SupervisorJob()) + Dispatchers.Main.immediate
     private val alarms by lazy { TimerAlarmScheduler(applicationContext) }
@@ -145,7 +146,9 @@ class PomodoroTimerService : Service() {
             val finishedType = finished.sessionType
             sessions.record(finishedType, finished.totalSeconds, System.currentTimeMillis())
             // A completed session changes today's count/streak — refresh the widget (not per-second).
-            TramoFocusWidget().updateAll(applicationContext)
+            // Routed through WidgetUpdater so every repaint goes through the same debounce that
+            // keeps MIUI/HyperOS from discarding closely-spaced updates.
+            widgetUpdater.refresh()
             postCompletionNotification(finishedType, preferences.soundVibrationOnFinish.first())
 
             val before = preferences.sessionsBeforeLongBreak.first()

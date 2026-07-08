@@ -39,6 +39,7 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferences: UserPreferencesRepository,
+    private val widgetUpdater: com.luis.tramo.widget.WidgetUpdater,
     taskRepository: TaskRepository,
     sessionRepository: SessionRepository
 ) : ViewModel() {
@@ -124,6 +125,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setDailyGoal(goal: Int) = viewModelScope.launch {
         preferences.setDailyGoal(goal.coerceIn(MIN_GOAL, MAX_GOAL))
+        // Fire-and-forget: WidgetUpdater debounces the burst and pushes one final, MIUI-safe update.
+        widgetUpdater.refresh()
     }
 
     fun setSessionsBeforeLongBreak(count: Int) = viewModelScope.launch {

@@ -2,7 +2,11 @@ package com.luis.tramo.widget
 
 import com.luis.tramo.data.UserPreferencesRepository
 import com.luis.tramo.data.session.SessionRepository
-import kotlinx.coroutines.flow.first
+import com.luis.tramo.data.session.computeCurrentStreak
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,18 +25,32 @@ data class WidgetSnapshot(
 }
 
 /**
- * Snapshot read of the widget's data from the same repositories the app uses. All computation lives
- * in the domain layer ([SessionRepository]); this only reads. Each query resolves immediately, so
- * the widget never blocks waiting for an unbounded flow.
+ * The widget's data from the same repositories the app uses. All computation lives in the domain
+ * layer ([SessionRepository], [computeCurrentStreak]); this only reads.
+ *
+ * Exposed as a REACTIVE [Flow]: with `provideContent`, Glance keeps the widget's composition alive
+ * and merely recomposes it, so a value read once (before `provideContent`) would freeze — a later
+ * `updateAll` only recomposes the content lambda and never re-runs the read. By collecting this
+ * flow inside the composition, every change (a completed session, a new daily goal) re-emits and
+ * repaints the widget in real time while the process is alive.
  */
 @Singleton
 class WidgetSnapshotProvider @Inject constructor(
     private val sessions: SessionRepository,
     private val preferences: UserPreferencesRepository
 ) {
-    suspend fun load(): WidgetSnapshot = WidgetSnapshot(
-        sessionsToday = sessions.focusCountToday(),
-        dailyGoal = preferences.dailyGoal.first().coerceAtLeast(1),
-        streak = sessions.currentStreak()
-    )
+    fun snapshotFlow(): Flow<WidgetSnapshot> {
+        val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return combine(
+            sessions.focusCountSince(todayStart),
+            preferences.dailyGoal,
+            sessions.focusDayStamps()
+        ) { count, goal, dayStamps ->
+            WidgetSnapshot(
+                sessionsToday = count,
+                dailyGoal = goal.coerceAtLeast(1),
+                streak = computeCurrentStreak(dayStamps, LocalDate.now())
+            )
+        }
+    }
 }
