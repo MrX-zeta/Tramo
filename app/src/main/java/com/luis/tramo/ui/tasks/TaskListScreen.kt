@@ -217,6 +217,16 @@ private fun LazyItemScope.SwipeableTaskRow(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
         label = "lid_rotation"
     )
+    val isCompleting = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+    val rawProgress = if (isCompleting) {
+        val offset = runCatching { dismissState.requireOffset() }.getOrDefault(0f)
+        (offset / 300f).coerceIn(0f, 1f)
+    } else 0f
+    val checkProgress by animateFloatAsState(
+        targetValue = rawProgress,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy),
+        label = "check_progress"
+    )
 
     LaunchedEffect(dismissState.settledValue) {
         when (dismissState.settledValue) {
@@ -235,7 +245,7 @@ private fun LazyItemScope.SwipeableTaskRow(
         state = dismissState,
         modifier = rowModifier,
         enableDismissFromStartToEnd = canComplete,
-        backgroundContent = { SwipeBackground(dismissState, shape, lidRotation) }
+        backgroundContent = { SwipeBackground(dismissState, shape, lidRotation, checkProgress) }
     ) {
         TaskCard(
             task = task,
@@ -247,7 +257,7 @@ private fun LazyItemScope.SwipeableTaskRow(
 }
 
 @Composable
-private fun SwipeBackground(state: SwipeToDismissBoxState, shape: Shape, lidRotation: Float) {
+private fun SwipeBackground(state: SwipeToDismissBoxState, shape: Shape, lidRotation: Float, checkProgress: Float) {
     val direction = state.dismissDirection
     val isDelete = direction == SwipeToDismissBoxValue.EndToStart
     val color = when (direction) {
@@ -298,7 +308,7 @@ private fun SwipeBackground(state: SwipeToDismissBoxState, shape: Shape, lidRota
                         .size(30.dp)
                         .semantics { contentDescription = completeDesc }
                 ) {
-                    drawStretchCheck(progress, iconColor)
+                    drawStretchCheck(checkProgress, iconColor)
                 }
             }
         }
@@ -306,6 +316,7 @@ private fun SwipeBackground(state: SwipeToDismissBoxState, shape: Shape, lidRota
 }
 
 private fun DrawScope.drawStretchCheck(progress: Float, color: Color) {
+    if (progress <= 0.01f) return
     val w = size.width
     val h = size.height
     val stroke = w * 0.13f
@@ -313,14 +324,20 @@ private fun DrawScope.drawStretchCheck(progress: Float, color: Color) {
     val p1 = Offset(0.14f * w, 0.54f * h)
     val elbow = Offset(0.40f * w, 0.78f * h)
     val end = Offset(0.86f * w, 0.26f * h)
-    val shortShare = 0.4f
-    val a = (progress / shortShare).coerceIn(0f, 1f)
-    val curElbow = Offset(p1.x + (elbow.x - p1.x) * a, p1.y + (elbow.y - p1.y) * a)
+
+    val shortLen = kotlin.math.hypot(elbow.x - p1.x, elbow.y - p1.y)
+    val longLen = kotlin.math.hypot(end.x - elbow.x, end.y - elbow.y)
+    val totalLen = shortLen + longLen
+    val drawn = progress * totalLen
+
     val path = Path().apply {
         moveTo(p1.x, p1.y)
-        lineTo(curElbow.x, curElbow.y)
-        if (progress > shortShare) {
-            val b = ((progress - shortShare) / (1f - shortShare)).coerceIn(0f, 1f)
+        if (drawn <= shortLen) {
+            val a = drawn / shortLen
+            lineTo(p1.x + (elbow.x - p1.x) * a, p1.y + (elbow.y - p1.y) * a)
+        } else {
+            lineTo(elbow.x, elbow.y)
+            val b = ((drawn - shortLen) / longLen).coerceIn(0f, 1f)
             lineTo(elbow.x + (end.x - elbow.x) * b, elbow.y + (end.y - elbow.y) * b)
         }
     }
