@@ -130,17 +130,18 @@ fun ReportScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
         ) {
-            // Entrance animation applies to the summary/KPI cards only; the chart & heatmap cards
+            // Bento composition: a full-width hero, then two medium tiles side by side, a wide heatmap,
+            // and the two full-width charts. Deliberately varied sizes — same cards, same data, still
+            // lazy. Entrance animation applies to the hero + KPI tiles only; the chart & heatmap cards
             // keep their own existing animations (no double-animation).
             item {
+                // Hero: the personal daily headline, visually the largest card.
                 ScreenEntrance(index = 0, visible = visible, reduceMotion = reduceMotion) {
                     TodayCard(today)
                 }
             }
             item {
-                OverviewCard(state = state, onSelectRange = viewModel::selectRange)
-            }
-            item {
+                // Two medium equal tiles in one row (kept lazy: one item, a Row of weighted cards).
                 ScreenEntrance(index = 1, visible = visible, reduceMotion = reduceMotion) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -165,7 +166,11 @@ fun ReportScreen(
                 }
             }
             item {
+                // Wide: the activity map spans the full width.
                 HeatmapCard(cells = heat.cells, columnLabels = heat.columnLabels)
+            }
+            item {
+                OverviewCard(state = state, onSelectRange = viewModel::selectRange)
             }
             item {
                 MonthlyCard(monthly = monthly)
@@ -190,9 +195,10 @@ private fun TodayCard(today: TodayUiState) {
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(Modifier.height(Spacing.sm))
+            // Hero headline: the largest figure in the report, so this card reads as the daily headline.
             Text(
                 text = formatDuration(today.focusSeconds),
-                style = MaterialTheme.typography.displaySmall.merge(TabularFigures),
+                style = MaterialTheme.typography.displayMedium.merge(TabularFigures),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
