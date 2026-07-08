@@ -92,6 +92,9 @@
     <string name="task_save">保存</string>
     <string name="task_deleted">タスクを削除しました</string>
     <string name="task_completed">タスクを完了しました</string>
+    <string name="task_reopened">タスクを再開しました</string>
+    <string name="goal_celebration_title">1日の目標達成</string>
+    <string name="goal_celebration_subtitle">本日 %1$d セッション完了</string>
     <string name="action_undo">元に戻す</string>
     <string name="task_complete_action">完了</string>
     <string name="task_delete_action">削除</string>

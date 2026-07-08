@@ -92,6 +92,9 @@
     <string name="task_save">Salvar</string>
     <string name="task_deleted">Tarefa excluída</string>
     <string name="task_completed">Tarefa concluída</string>
+    <string name="task_reopened">Tarefa reaberta</string>
+    <string name="goal_celebration_title">Meta diária cumprida</string>
+    <string name="goal_celebration_subtitle">%1$d sessões concluídas hoje</string>
     <string name="action_undo">Desfazer</string>
     <string name="task_complete_action">Concluir</string>
     <string name="task_delete_action">Excluir</string>

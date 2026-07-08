@@ -43,7 +43,7 @@
     <string name="settings_daily_goal">Meta diaria</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_close">Cerrar</string>
-    <string name="settings_language_system">Predeterminado del sistema</string>
+    <string name="settings_language_system">Predeterminado</string>
     <string name="settings_subtitle">Personaliza tu experiencia</string>
     <string name="settings_summary_tasks">Tareas</string>
     <string name="settings_summary_sessions">Sesiones</string>
@@ -122,6 +122,9 @@
     <string name="task_save">Guardar</string>
     <string name="task_deleted">Tarea eliminada</string>
     <string name="task_completed">Tarea completada</string>
+    <string name="task_reopened">Tarea reactivada</string>
+    <string name="goal_celebration_title">Meta diaria cumplida</string>
+    <string name="goal_celebration_subtitle">%1$d sesiones completadas hoy</string>
     <string name="action_undo">Deshacer</string>
     <string name="task_complete_action">Completar</string>
     <string name="task_delete_action">Eliminar</string>
