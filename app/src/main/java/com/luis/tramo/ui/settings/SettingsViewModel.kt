@@ -145,9 +145,9 @@ class SettingsViewModel @Inject constructor(
 
     companion object {
         const val MIN_GOAL = 1
-        const val MAX_GOAL = 16
+        const val MAX_GOAL = 12
         const val MIN_SESSIONS_BEFORE_LONG = 2
-        const val MAX_SESSIONS_BEFORE_LONG = 8
+        const val MAX_SESSIONS_BEFORE_LONG = 6
 
         val FOCUS_OPTIONS = listOf(5, 10, 25)
         val BREAK_OPTIONS = listOf(5, 10, 15)

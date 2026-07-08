@@ -60,8 +60,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -73,6 +77,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.ui.theme.Spacing
 import com.luis.tramo.ui.theme.TabularFigures
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,11 +91,26 @@ fun SettingsScreen(
     val reduceMotion = rememberReduceMotion()
     var visible by remember { mutableStateOf(false) }
     val goalPulse = remember { Animatable(0f) }
+    val scrollState = rememberScrollState()
+
+    // Window-space geometry, captured on layout, used to center the daily-goal row when arriving
+    // from the widget so its pulse is always in view.
+    var viewportTop by remember { mutableStateOf(0f) }
+    var viewportHeight by remember { mutableStateOf(0) }
+    var goalRowTop by remember { mutableStateOf(0f) }
+    var goalRowHeight by remember { mutableStateOf(0) }
+
     LaunchedEffect(highlight) {
         if (highlight == "daily_goal") {
             goalPulse.snapTo(0f)
-            // Let the card's entrance animation settle before drawing the eye to the goal row.
-            kotlinx.coroutines.delay(500)
+            // Let the card's entrance settle, center the goal row, then draw the eye to it.
+            kotlinx.coroutines.delay(600)
+            if (viewportHeight > 0 && goalRowHeight > 0) {
+                val rowInViewport = goalRowTop - viewportTop
+                val delta = rowInViewport - (viewportHeight - goalRowHeight) / 2f
+                val target = (scrollState.value + delta).roundToInt().coerceIn(0, scrollState.maxValue)
+                scrollState.animateScrollTo(target)
+            }
             repeat(3) {
                 goalPulse.animateTo(1f, tween(220))
                 goalPulse.animateTo(0f, tween(220))
@@ -104,7 +124,11 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .onGloballyPositioned {
+                    viewportTop = it.positionInWindow().y
+                    viewportHeight = it.size.height
+                }
+                .verticalScroll(scrollState)
                 .padding(horizontal = Spacing.lg)
                 .padding(bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.lg)
@@ -121,7 +145,11 @@ fun SettingsScreen(
                     state = state,
                     viewModel = viewModel,
                     onOpenLanguage = { showLanguageDialog = true },
-                    goalHighlight = goalPulse.value
+                    goalHighlight = goalPulse.value,
+                    goalRowModifier = Modifier.onGloballyPositioned {
+                        goalRowTop = it.positionInWindow().y
+                        goalRowHeight = it.size.height
+                    }
                 )
             }
         }
@@ -306,7 +334,8 @@ private fun PreferencesCard(
     state: SettingsUiState,
     viewModel: SettingsViewModel,
     onOpenLanguage: () -> Unit,
-    goalHighlight: Float = 0f
+    goalHighlight: Float = 0f,
+    goalRowModifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
@@ -363,6 +392,7 @@ private fun PreferencesCard(
         }
 
         PreferenceRow(
+            modifier = goalRowModifier,
             icon = Icons.Filled.Flag,
             title = stringResource(R.string.settings_daily_goal),
             subtitle = stringResource(R.string.settings_daily_goal_subtitle),
@@ -420,20 +450,27 @@ private fun PreferenceRow(
     subtitle: String?,
     onClick: (() -> Unit)? = null,
     highlight: Float = 0f,
+    modifier: Modifier = Modifier,
     trailing: @Composable () -> Unit
 ) {
     val highlightColor = MaterialTheme.colorScheme.primaryContainer
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .drawBehind {
                 if (highlight > 0f) {
-                    val r = Spacing.sm.toPx()
+                    // Extend beyond the row (into the card padding and inter-row gaps) so the flash
+                    // reads as a card wrapping the whole item, not a thin strip hugging the text.
+                    val insetX = 12.dp.toPx()
+                    val insetY = 10.dp.toPx()
+                    val radius = 16.dp.toPx()
                     drawRoundRect(
                         color = highlightColor,
                         alpha = highlight.coerceIn(0f, 1f),
-                        cornerRadius = CornerRadius(r, r)
+                        topLeft = Offset(-insetX, -insetY),
+                        size = Size(size.width + insetX * 2, size.height + insetY * 2),
+                        cornerRadius = CornerRadius(radius, radius)
                     )
                 }
             }
