@@ -152,7 +152,7 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
             Spacer(GlanceModifier.height(3.dp))
             Text(
                 text = "Tramo",
-                style = TextStyle(color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                style = TextStyle(color = Muted, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             )
         }
     }
