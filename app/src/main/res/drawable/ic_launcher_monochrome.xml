@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 13+ themed-icon layer: the stepped-blocks silhouette in a single flat tone (the system
+  tints it). Same geometry as the foreground; the union of the three overlapping blocks keeps the
+  stepped diagonal shape recognizable in one colour.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#2F5D62"
+        android:pathData="M35,54 L49,54 A5,5 0 0 1 54,59 L54,73 A5,5 0 0 1 49,78 L35,78 A5,5 0 0 1 30,73 L30,59 A5,5 0 0 1 35,54 Z" />
+    <path
+        android:fillColor="#2F5D62"
+        android:pathData="M47,42 L61,42 A5,5 0 0 1 66,47 L66,61 A5,5 0 0 1 61,66 L47,66 A5,5 0 0 1 42,61 L42,47 A5,5 0 0 1 47,42 Z" />
+    <path
+        android:fillColor="#2F5D62"
+        android:pathData="M59,30 L73,30 A5,5 0 0 1 78,35 L78,49 A5,5 0 0 1 73,54 L59,54 A5,5 0 0 1 54,49 L54,35 A5,5 0 0 1 59,30 Z" />
+</vector>
