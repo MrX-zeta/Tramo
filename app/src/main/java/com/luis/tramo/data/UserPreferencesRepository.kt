@@ -55,6 +55,9 @@ class UserPreferencesRepository @Inject constructor(
     /** Daily focus-session goal. Default 8. */
     val dailyGoal: Flow<Int> = dataStore.data.map { it[DAILY_GOAL] ?: DEFAULT_DAILY_GOAL }
 
+    /** ISO date (yyyy-MM-dd) the daily-goal celebration was last shown; empty if never. */
+    val lastGoalCelebratedDate: Flow<String> = dataStore.data.map { it[LAST_GOAL_CELEBRATED] ?: "" }
+
     /** Keep the screen on while a session runs. Default off. */
     val keepScreenOn: Flow<Boolean> = dataStore.data.map { it[KEEP_SCREEN_ON] ?: false }
 
@@ -110,6 +113,10 @@ class UserPreferencesRepository @Inject constructor(
 
     suspend fun setDailyGoal(goal: Int) {
         dataStore.edit { it[DAILY_GOAL] = goal }
+    }
+
+    suspend fun setLastGoalCelebratedDate(date: String) {
+        dataStore.edit { it[LAST_GOAL_CELEBRATED] = date }
     }
 
     suspend fun setLanguageTag(tag: String) {
@@ -168,6 +175,7 @@ class UserPreferencesRepository @Inject constructor(
         val SESSIONS_BEFORE_LONG = intPreferencesKey("sessions_before_long_break")
         val DARK_MODE = booleanPreferencesKey("dark_mode_override")
         val DAILY_GOAL = intPreferencesKey("daily_goal")
+        val LAST_GOAL_CELEBRATED = stringPreferencesKey("last_goal_celebrated_date")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val AUTO_START_BREAKS = booleanPreferencesKey("auto_start_breaks")
         val AUTO_START_FOCUS = booleanPreferencesKey("auto_start_next_focus")

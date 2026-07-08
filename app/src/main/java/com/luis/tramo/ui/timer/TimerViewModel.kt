@@ -30,6 +30,9 @@ import javax.inject.Inject
 
 data class TaskPreview(val emoji: String, val title: String)
 
+/** Payload for the daily-goal celebration: the goal hit, sessions done today, and current streak. */
+data class CelebrationInfo(val goal: Int, val sessions: Int, val streak: Int)
+
 data class TimerUiState(
     val sessionType: SessionType = SessionType.FOCUS,
     val status: TimerStatus = TimerStatus.IDLE,
@@ -79,6 +82,30 @@ class TimerViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = TimerUiState()
         )
+
+    /**
+     * Non-null when today's focus count has reached the goal and it hasn't been celebrated yet
+     * today. Reactive, so it fires whether the goal-reaching session finishes with the app open OR
+     * the user simply returns to the app afterwards; [markGoalCelebrated] flips it off for the day.
+     */
+    val celebration: StateFlow<CelebrationInfo?> =
+        combine(
+            sessionRepository.focusCountSince(todayStart),
+            preferences.dailyGoal,
+            sessionRepository.focusDayStamps(),
+            preferences.lastGoalCelebratedDate
+        ) { count, goal, dayStamps, celebratedDate ->
+            if (goal > 0 && count >= goal && celebratedDate != LocalDate.now().toString()) {
+                CelebrationInfo(goal = goal, sessions = count, streak = computeCurrentStreak(dayStamps, LocalDate.now()))
+            } else {
+                null
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Records that today's celebration was shown, so it never repeats the same day. */
+    fun markGoalCelebrated() {
+        viewModelScope.launch { preferences.setLastGoalCelebratedDate(LocalDate.now().toString()) }
+    }
 
     init {
         viewModelScope.launch {

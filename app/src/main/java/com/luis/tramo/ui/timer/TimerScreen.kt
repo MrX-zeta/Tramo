@@ -87,6 +87,18 @@ fun TimerScreen(
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
 
+    // Daily-goal celebration: fires when the goal is reached with the app open, or on the next
+    // visit that day; marked immediately (once per day). Local state holds it through its animation.
+    val celebration by viewModel.celebration.collectAsStateWithLifecycle()
+    var celebrationInfo by remember { mutableStateOf<CelebrationInfo?>(null) }
+    LaunchedEffect(celebration) {
+        celebration?.let {
+            celebrationInfo = it
+            viewModel.markGoalCelebrated()
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         topBar = { TimerHeader(onOpenSettings) },
         bottomBar = bottomBar
@@ -115,6 +127,14 @@ fun TimerScreen(
             ScreenEntrance(index = 2, visible = visible, reduceMotion = reduceMotion) {
                 TasksCard(tasks = state.todaysTasks)
             }
+        }
+    }
+        celebrationInfo?.let { info ->
+            GoalCelebrationOverlay(
+                info = info,
+                reduceMotion = reduceMotion,
+                onDismiss = { celebrationInfo = null }
+            )
         }
     }
 }
@@ -214,8 +234,14 @@ private fun StreakCard(streak: Int, weekDots: List<Boolean>) {
 @Composable
 private fun WeekRow(dots: List<Boolean>) {
     val labels = remember {
-        val first = WeekFields.of(Locale.getDefault()).firstDayOfWeek
-        (0L until 7L).map { first.plus(it).getDisplayName(java.time.format.TextStyle.NARROW, Locale.getDefault()) }
+        val locale = Locale.getDefault()
+        val first = WeekFields.of(locale).firstDayOfWeek
+        // Two-letter labels (Lu, Ma, Mi, Ju, …) instead of NARROW: in Spanish, NARROW renders
+        // Wednesday as "X", which under a completed streak dot reads like a cross/error.
+        (0L until 7L).map {
+            first.plus(it).getDisplayName(java.time.format.TextStyle.SHORT, locale)
+                .take(2).replaceFirstChar { c -> c.uppercase() }
+        }
     }
     Row(
         modifier = Modifier.fillMaxWidth(),

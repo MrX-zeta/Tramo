@@ -21,11 +21,18 @@ import javax.inject.Singleton
 @Singleton
 class DatabaseSeeder @Inject constructor(
     private val sessionDao: SessionDao,
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    private val preferences: UserPreferencesRepository
 ) {
     suspend fun seed() {
         sessionDao.deleteAll()
         taskDao.deleteAll()
+        // Set the goal (6) BEFORE seeding sessions, so the reactive celebration never catches a
+        // transient where an old, lower goal is already met. This leaves a clean 5/6, un-celebrated,
+        // so completing one more focus session by hand triggers the celebration for real.
+        preferences.setDailyGoal(6)
+        preferences.setFocusPreset(5) // short focus so the test session finishes quickly
+        preferences.setLastGoalCelebratedDate("")
         seedSessions()
         seedTasks()
     }
@@ -42,7 +49,8 @@ class DatabaseSeeder @Inject constructor(
             val active = dayOffset < 6 || random.nextFloat() < 0.55f
             if (!active) continue
 
-            val focusCount = 1 + random.nextInt(5) // 1..5 focus sessions that day
+            // Today is fixed at 5 so it sits one below the goal (6) for the celebration test.
+            val focusCount = if (dayOffset == 0) 5 else 1 + random.nextInt(5)
             for (i in 0 until focusCount) {
                 val hour = focusHours[random.nextInt(focusHours.size)]
                 val minute = random.nextInt(60)
