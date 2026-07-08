@@ -102,9 +102,10 @@ class ReportViewModel @Inject constructor(
     }.flowOn(Dispatchers.Default)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReportUiState())
 
-    // 12-week window starting on the Monday 11 weeks before the current week.
+    // 10-week window starting on the Monday 9 weeks before the current week — a recent view that
+    // keeps the current period prominent (the 12-month bar chart covers the long-term trend).
     private val heatmapStartMonday: LocalDate =
-        LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(11)
+        LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(9)
 
     val heatmapState: StateFlow<HeatmapUiState> = combine(
         repository.focusCountsByDay(heatmapStartMonday.atStartOfDay(zone).toInstant().toEpochMilli()),
@@ -121,7 +122,7 @@ class ReportViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HeatmapUiState())
 
     private val monthsWindowStart: Long =
-        LocalDate.now().withDayOfMonth(1).minusMonths(11).atStartOfDay(zone).toInstant().toEpochMilli()
+        LocalDate.now().withDayOfMonth(1).minusMonths((MONTHS - 1).toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
 
     val monthlyState: StateFlow<MonthlyUiState> =
         repository.focusCountsByMonth(monthsWindowStart)
@@ -143,15 +144,15 @@ class ReportViewModel @Inject constructor(
         }
     }
 
-    /** Last 12 months (oldest → this month) of focus-session counts + short month labels. */
+    /** Last [MONTHS] months (oldest → this month) of focus-session counts + short month labels. */
     private fun buildMonthly(rows: List<MonthCount>): MonthlyUiState {
         val countByMonth = rows.associate { it.month to it.count }
         val keyFormat = DateTimeFormatter.ofPattern("yyyy-MM")
         val locale = Locale.getDefault()
         val thisMonth = YearMonth.now()
-        val counts = ArrayList<Int>(12)
-        val labels = ArrayList<String>(12)
-        for (i in 11 downTo 0) {
+        val counts = ArrayList<Int>(MONTHS)
+        val labels = ArrayList<String>(MONTHS)
+        for (i in (MONTHS - 1) downTo 0) {
             val ym = thisMonth.minusMonths(i.toLong())
             counts.add(countByMonth[ym.format(keyFormat)] ?: 0)
             labels.add(monthShort(ym.month, locale))
@@ -217,6 +218,7 @@ class ReportViewModel @Inject constructor(
     }
 
     private companion object {
-        const val WEEKS = 12
+        const val WEEKS = 10
+        const val MONTHS = 6
     }
 }

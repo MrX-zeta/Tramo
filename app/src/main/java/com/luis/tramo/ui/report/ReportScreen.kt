@@ -205,7 +205,9 @@ private fun TodayCard(today: TodayUiState) {
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(Spacing.md))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xl)) {
+            // Stacked (not side-by-side): both rows share the same left margin and the values
+            // right-align, so "Descanso 15 min" can never wrap or sit lower than "Concentración".
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 BreakdownItem(stringResource(R.string.report_label_focus), "$focusMinutes min", MaterialTheme.colorScheme.primary)
                 BreakdownItem(stringResource(R.string.report_label_break), "$breakMinutes min", MaterialTheme.colorScheme.tertiary)
             }
@@ -225,18 +227,23 @@ private fun TodayCard(today: TodayUiState) {
 
 @Composable
 private fun BreakdownItem(label: String, value: String, dotColor: androidx.compose.ui.graphics.Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(dotColor))
         Spacer(Modifier.width(Spacing.xs))
         Text(
-            text = "$label  ",
+            text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.weight(1f))
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.merge(TabularFigures),
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
         )
     }
 }
@@ -336,6 +343,7 @@ private fun HeatmapCard(cells: List<HeatmapCell>, columnLabels: List<String>, re
 @Composable
 private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>, reduceMotion: Boolean) {
     var selected by remember { mutableStateOf<HeatmapCell?>(null) }
+    val today = remember { LocalDate.now() }
     // Positional sweep: one time-driven value (ms). Each cell derives its own progress from its COLUMN
     // (week) index, so the map fills left-to-right — chronological, matching how a heatmap is read —
     // as a single directional wave. Re-runs on every data/view change (keyed on cells) and when the
@@ -355,7 +363,12 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
 
     val dayLabels = remember {
-        (0L until 7L).map { DayOfWeek.MONDAY.plus(it).getDisplayName(TextStyle.NARROW, Locale.getDefault()) }
+        val locale = Locale.getDefault()
+        // Two-letter labels instead of NARROW (which renders Wednesday as a confusing "X" in Spanish).
+        (0L until 7L).map {
+            DayOfWeek.MONDAY.plus(it).getDisplayName(TextStyle.SHORT, locale)
+                .take(2).replaceFirstChar { c -> c.uppercase() }
+        }
     }
 
     Column {
@@ -381,9 +394,9 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
 
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val gap = 4.dp
-            val labelWidth = 18.dp
+            val labelWidth = 22.dp
             val gridWidth = maxWidth - labelWidth - Spacing.sm
-            val cell = (gridWidth - gap * 11) / 12
+            val cell = (gridWidth - gap * (HEATMAP_COLUMNS - 1)) / HEATMAP_COLUMNS
             Column {
                 Row {
                     Column(verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -395,7 +408,7 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
                     }
                     Spacer(Modifier.width(Spacing.sm))
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(12),
+                        columns = GridCells.Fixed(HEATMAP_COLUMNS),
                         userScrollEnabled = false,
                         horizontalArrangement = Arrangement.spacedBy(gap),
                         verticalArrangement = Arrangement.spacedBy(gap),
@@ -422,8 +435,11 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(color)
                                     .then(
-                                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(4.dp))
-                                        else Modifier
+                                        when {
+                                            isSelected -> Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, RoundedCornerShape(4.dp))
+                                            itemCell.date == today -> Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                                            else -> Modifier
+                                        }
                                     )
                                     .clickable { selected = itemCell }
                             )
@@ -458,7 +474,7 @@ private val ALPHA_BY_LEVEL = floatArrayOf(0f, 0.4f, 0.6f, 0.8f, 1f)
 
 // Heatmap positional sweep: 12 columns, ~16ms per column, each cell fades+scales over ~220ms, so the
 // wave crosses the whole map in 11*16 + 220 = 396ms.
-private const val HEATMAP_COLUMNS = 12
+private const val HEATMAP_COLUMNS = 10
 private const val SWEEP_COLUMN_DELAY_MS = 34f
 private const val SWEEP_CELL_MS = 460f
 private const val SWEEP_TOTAL_MS = (HEATMAP_COLUMNS - 1) * SWEEP_COLUMN_DELAY_MS + SWEEP_CELL_MS
