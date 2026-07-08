@@ -1,5 +1,6 @@
 package com.luis.tramo.ui.tasks
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,16 +20,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
@@ -58,11 +55,18 @@ import com.luis.tramo.ui.components.rememberReduceMotion
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -195,19 +199,28 @@ private fun LazyItemScope.SwipeableTaskRow(
     val shape = RoundedCornerShape(16.dp)
     // Reactive reflow when the row leaves the list; instant under reduced motion.
     val rowModifier = if (reduceMotion) Modifier else Modifier.animateItem()
+    // Fire the action on a settle, then immediately snap back to Settled. The reset is essential: the
+    // swipe state is saved/reused across recomposition (and when the row reappears in the other tab
+    // under the same key), so a lingering StartToEnd/EndToStart would re-fire the action — that was
+    // the "complete then auto-reopen / broken undo" bug. Snapping to Settled also gives the reversible
+    // reflow the spec wants (mark complete → row settles back → the list flow reflows it out).
+    LaunchedEffect(dismissState.settledValue) {
+        when (dismissState.settledValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                onToggleCompleted()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
+            SwipeToDismissBoxValue.EndToStart -> {
+                onDelete()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
+            SwipeToDismissBoxValue.Settled -> {}
+        }
+    }
     SwipeToDismissBox(
         state = dismissState,
         modifier = rowModifier,
-        backgroundContent = { SwipeBackground(dismissState, shape) },
-        onDismiss = { direction ->
-            when (direction) {
-                // Reversible: mark complete/reopen and let the list flow remove the row (no hard dismiss).
-                SwipeToDismissBoxValue.StartToEnd -> onToggleCompleted()
-                // Destructive: hide + snackbar undo; the Room delete commits only after the undo window.
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
-                SwipeToDismissBoxValue.Settled -> {}
-            }
-        }
+        backgroundContent = { SwipeBackground(dismissState, shape) }
     ) {
         TaskCard(
             task = task,
@@ -227,33 +240,80 @@ private fun SwipeBackground(state: SwipeToDismissBoxState, shape: Shape) {
         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
         SwipeToDismissBoxValue.Settled -> Color.Transparent
     }
+    val iconColor = if (isDelete) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary
+    val completeDesc = stringResource(R.string.task_complete_action)
+    val deleteDesc = stringResource(R.string.task_delete_action)
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(shape)
             .background(color)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 26.dp),
         // Icon pinned to the acting edge, vertically centered, fixed while the row slides over it.
         contentAlignment = if (isDelete) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         if (direction != SwipeToDismissBoxValue.Settled) {
             val progress = state.progress.coerceIn(0f, 1f)
-            Icon(
-                imageVector = if (isDelete) Icons.Filled.Delete else Icons.Filled.Check,
-                contentDescription = stringResource(
-                    if (isDelete) R.string.task_delete_action else R.string.task_complete_action
-                ),
-                tint = if (isDelete) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimary,
+            Canvas(
                 modifier = Modifier
-                    .size(26.dp)
-                    .graphicsLayer {
-                        val s = 0.6f + 0.4f * progress
-                        scaleX = s
-                        scaleY = s
-                        alpha = progress
-                    }
-            )
+                    .size(30.dp)
+                    .semantics { contentDescription = if (isDelete) deleteDesc else completeDesc }
+            ) {
+                // The check draws/stretches itself with the swipe; the trash lid lifts open with it.
+                if (isDelete) drawTrashCan(progress, iconColor) else drawStretchCheck(progress, iconColor)
+            }
         }
+    }
+}
+
+/** A checkmark that "stretches" as it is drawn — the short arm first, then the long arm, by progress. */
+private fun DrawScope.drawStretchCheck(progress: Float, color: Color) {
+    val w = size.width
+    val h = size.height
+    val stroke = w * 0.13f
+    val style = Stroke(width = stroke, cap = StrokeCap.Round, join = StrokeJoin.Round)
+    val p1 = Offset(0.14f * w, 0.54f * h)
+    val elbow = Offset(0.40f * w, 0.78f * h)
+    val end = Offset(0.86f * w, 0.26f * h)
+    val shortShare = 0.4f
+    val a = (progress / shortShare).coerceIn(0f, 1f)
+    val curElbow = Offset(p1.x + (elbow.x - p1.x) * a, p1.y + (elbow.y - p1.y) * a)
+    val path = Path().apply {
+        moveTo(p1.x, p1.y)
+        lineTo(curElbow.x, curElbow.y)
+        if (progress > shortShare) {
+            val b = ((progress - shortShare) / (1f - shortShare)).coerceIn(0f, 1f)
+            lineTo(elbow.x + (end.x - elbow.x) * b, elbow.y + (end.y - elbow.y) * b)
+        }
+    }
+    drawPath(path, color, style = style)
+}
+
+/** A trash can whose lid rotates open (around its far end) as the delete swipe progresses. */
+private fun DrawScope.drawTrashCan(progress: Float, color: Color) {
+    val w = size.width
+    val h = size.height
+    val stroke = w * 0.09f
+    val cap = StrokeCap.Round
+    // Tapered can body.
+    val body = Path().apply {
+        moveTo(0.27f * w, 0.40f * h)
+        lineTo(0.73f * w, 0.40f * h)
+        lineTo(0.66f * w, 0.92f * h)
+        lineTo(0.34f * w, 0.92f * h)
+        close()
+    }
+    drawPath(body, color, style = Stroke(width = stroke, cap = cap, join = StrokeJoin.Round))
+    drawLine(color, Offset(0.43f * w, 0.50f * h), Offset(0.41f * w, 0.84f * h), stroke * 0.7f, cap)
+    drawLine(color, Offset(0.57f * w, 0.50f * h), Offset(0.59f * w, 0.84f * h), stroke * 0.7f, cap)
+    // Lid + handle, lifting open around the right end.
+    val lidY = 0.31f * h
+    val pivot = Offset(0.86f * w, lidY)
+    rotate(degrees = -progress * 55f, pivot = pivot) {
+        drawLine(color, Offset(0.14f * w, lidY), Offset(0.86f * w, lidY), stroke, cap)
+        drawLine(color, Offset(0.40f * w, lidY), Offset(0.40f * w, 0.19f * h), stroke, cap)
+        drawLine(color, Offset(0.60f * w, lidY), Offset(0.60f * w, 0.19f * h), stroke, cap)
+        drawLine(color, Offset(0.40f * w, 0.19f * h), Offset(0.60f * w, 0.19f * h), stroke, cap)
     }
 }
 
