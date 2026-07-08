@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,10 +28,15 @@ class MainActivity : AppCompatActivity() {
 
     @Inject lateinit var seeder: DatabaseSeeder
 
+    // Latest launch intent as Compose state, so a widget tap navigates on both a cold start and
+    // onNewIntent (app already running). Reading the Activity's `intent` directly wouldn't recompose.
+    private val launchIntent = mutableStateOf<Intent?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         maybeSeed()
         enableEdgeToEdge()
+        launchIntent.value = intent
         setContent {
             val mainViewModel: MainViewModel = viewModel()
             val startDestination by mainViewModel.startDestination.collectAsStateWithLifecycle()
@@ -44,16 +50,17 @@ class MainActivity : AppCompatActivity() {
                         startDestination = debugScreen ?: destination,
                         navController = navController
                     )
-                    val widgetDestination = intent.getStringExtra(EXTRA_DESTINATION)
-                    val highlight = intent.getStringExtra(EXTRA_HIGHLIGHT)
-                    LaunchedEffect(widgetDestination, destination) {
+                    val current by launchIntent
+                    LaunchedEffect(current, destination) {
+                        val widgetDestination = current?.getStringExtra(EXTRA_DESTINATION)
+                        val highlight = current?.getStringExtra(EXTRA_HIGHLIGHT)
                         if (widgetDestination == TramoDestinations.SETTINGS) {
                             val route = if (highlight != null) {
                                 "${TramoDestinations.SETTINGS}?highlight=$highlight"
                             } else TramoDestinations.SETTINGS
-                            navController.navigate(route)
-                            intent.removeExtra(EXTRA_DESTINATION)
-                            intent.removeExtra(EXTRA_HIGHLIGHT)
+                            navController.navigate(route) { launchSingleTop = true }
+                            current?.removeExtra(EXTRA_DESTINATION)
+                            current?.removeExtra(EXTRA_HIGHLIGHT)
                         }
                     }
                 }
@@ -64,6 +71,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        launchIntent.value = intent
     }
 
     private fun maybeSeed() {

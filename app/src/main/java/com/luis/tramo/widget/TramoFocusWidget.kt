@@ -113,7 +113,14 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
     val strokePx = (ringPx * 0.12f).coerceAtLeast(6f)
     val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
             Configuration.UI_MODE_NIGHT_YES
-    val arcColor = if (night) 0xFF8FCBD1.toInt() else 0xFF2F5D62.toInt()
+    val arcColor = when {
+        // Goal met: amber (same accent as the streak and the in-app celebration). Deeper in light
+        // mode for contrast on the pale widget background, brighter in dark mode.
+        data.goalReached && night -> 0xFFE8B75D.toInt()
+        data.goalReached -> 0xFFC0862B.toInt()
+        night -> 0xFF8FCBD1.toInt()
+        else -> 0xFF2F5D62.toInt()
+    }
     val trackColor = if (night) 0xFF3A4642.toInt() else 0xFFDBE4E3.toInt()
     val ring = focusRingBitmap(ringPx, strokePx, data.progress, arcColor, trackColor)
 

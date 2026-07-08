@@ -19,6 +19,9 @@ data class WidgetSnapshot(
     /** Ring fill fraction, clamped to 0..1 (guarded against a zero goal). */
     val progress: Float get() = if (dailyGoal > 0) (sessionsToday.toFloat() / dailyGoal).coerceIn(0f, 1f) else 0f
 
+    /** True once today's sessions meet or exceed the goal — the ring turns amber to signal it. */
+    val goalReached: Boolean get() = dailyGoal > 0 && sessionsToday >= dailyGoal
+
     companion object {
         const val DEFAULT_DAILY_GOAL = 8
     }
