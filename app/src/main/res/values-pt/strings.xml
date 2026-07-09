@@ -95,6 +95,11 @@
     <string name="task_reopened">Tarefa reaberta</string>
     <string name="goal_celebration_title">Meta diária cumprida</string>
     <string name="goal_celebration_subtitle">%1$d sessões concluídas hoje</string>
+    <string name="report_today">Hoje</string>
+    <plurals name="report_session_count">
+        <item quantity="one">%d sessão</item>
+        <item quantity="other">%d sessões</item>
+    </plurals>
     <string name="action_undo">Desfazer</string>
     <string name="task_complete_action">Concluir</string>
     <string name="task_delete_action">Excluir</string>

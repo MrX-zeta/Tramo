@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -372,20 +373,20 @@ private fun ActivityHeatmap(cells: List<HeatmapCell>, columnLabels: List<String>
     }
 
     Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringResource(R.string.report_activity_map),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = selected?.date?.format(DATE_FORMAT) ?: LocalDate.now().format(DATE_FORMAT),
-                style = MaterialTheme.typography.bodySmall,
-                color = onSurfaceVariant
-            )
-        }
         Text(
-            text = selected?.let { "${it.date.format(DATE_FORMAT)} · ${it.count}" } ?: " ",
+            text = stringResource(R.string.report_activity_map),
+            style = MaterialTheme.typography.titleMedium
+        )
+        // Detail line for the tapped cell: "Hoy · N sesiones" for today, "dd/MM/yyyy · N sesiones"
+        // otherwise; blank when nothing is selected.
+        val todayLabel = stringResource(R.string.report_today)
+        val selectedCount = selected?.count ?: 0
+        val sessionsText = pluralStringResource(R.plurals.report_session_count, selectedCount, selectedCount)
+        Text(
+            text = selected?.let { cell ->
+                val day = if (cell.date == today) todayLabel else cell.date.format(DATE_FORMAT)
+                "$day · $sessionsText"
+            } ?: " ",
             style = MaterialTheme.typography.bodySmall,
             color = onSurfaceVariant,
             modifier = Modifier.padding(top = Spacing.xs)

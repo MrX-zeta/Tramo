@@ -130,6 +130,11 @@
     <string name="task_reopened">Task reopened</string>
     <string name="goal_celebration_title">Daily goal reached</string>
     <string name="goal_celebration_subtitle">%1$d sessions completed today</string>
+    <string name="report_today">Today</string>
+    <plurals name="report_session_count">
+        <item quantity="one">%d session</item>
+        <item quantity="other">%d sessions</item>
+    </plurals>
     <string name="action_undo">Undo</string>
     <string name="task_complete_action">Complete</string>
     <string name="task_delete_action">Delete</string>

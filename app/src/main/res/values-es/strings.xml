@@ -125,6 +125,11 @@
     <string name="task_reopened">Tarea reactivada</string>
     <string name="goal_celebration_title">Meta diaria cumplida</string>
     <string name="goal_celebration_subtitle">%1$d sesiones completadas hoy</string>
+    <string name="report_today">Hoy</string>
+    <plurals name="report_session_count">
+        <item quantity="one">%d sesión</item>
+        <item quantity="other">%d sesiones</item>
+    </plurals>
     <string name="action_undo">Deshacer</string>
     <string name="task_complete_action">Completar</string>
     <string name="task_delete_action">Eliminar</string>

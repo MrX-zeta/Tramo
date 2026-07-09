@@ -95,6 +95,11 @@
     <string name="task_reopened">Aufgabe wieder geöffnet</string>
     <string name="goal_celebration_title">Tagesziel erreicht</string>
     <string name="goal_celebration_subtitle">%1$d Sitzungen heute abgeschlossen</string>
+    <string name="report_today">Heute</string>
+    <plurals name="report_session_count">
+        <item quantity="one">%d Sitzung</item>
+        <item quantity="other">%d Sitzungen</item>
+    </plurals>
     <string name="action_undo">Rückgängig</string>
     <string name="task_complete_action">Erledigen</string>
     <string name="task_delete_action">Löschen</string>
