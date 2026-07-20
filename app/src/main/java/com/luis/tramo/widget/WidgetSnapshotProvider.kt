@@ -1,20 +1,26 @@
 package com.luis.tramo.widget
 
 import com.luis.tramo.data.UserPreferencesRepository
+import com.luis.tramo.data.session.DayCount
 import com.luis.tramo.data.session.SessionRepository
 import com.luis.tramo.data.session.computeCurrentStreak
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** The three numbers the focus-ring widget renders. Its default is a valid empty/zero state. */
+/** The numbers the focus-ring widget renders. Its default is a valid empty/zero state. */
 data class WidgetSnapshot(
     val sessionsToday: Int = 0,
     val dailyGoal: Int = DEFAULT_DAILY_GOAL,
-    val streak: Int = 0
+    val streak: Int = 0,
+    /** Focus seconds accumulated today; only the extra-large widget shows it. */
+    val focusSecondsToday: Int = 0,
+    /** Focus-session counts for the last 7 local days, oldest → today. Size 7, or empty when unread. */
+    val weekCounts: List<Int> = emptyList()
 ) {
     /** Ring fill fraction, clamped to 0..1 (guarded against a zero goal). */
     val progress: Float get() = if (dailyGoal > 0) (sessionsToday.toFloat() / dailyGoal).coerceIn(0f, 1f) else 0f
@@ -43,17 +49,35 @@ class WidgetSnapshotProvider @Inject constructor(
     private val preferences: UserPreferencesRepository
 ) {
     fun snapshotFlow(): Flow<WidgetSnapshot> {
-        val todayStart = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val zone = ZoneId.systemDefault()
+        val todayStart = LocalDate.now().atStartOfDay(zone).toInstant().toEpochMilli()
+        val weekStart = LocalDate.now().minusDays(6).atStartOfDay(zone).toInstant().toEpochMilli()
         return combine(
             sessions.focusCountSince(todayStart),
             preferences.dailyGoal,
-            sessions.focusDayStamps()
-        ) { count, goal, dayStamps ->
+            sessions.focusDayStamps(),
+            sessions.focusSecondsSince(todayStart),
+            sessions.focusCountsByDay(weekStart)
+        ) { count, goal, dayStamps, focusSeconds, weekRows ->
             WidgetSnapshot(
                 sessionsToday = count,
                 dailyGoal = goal.coerceAtLeast(1),
-                streak = computeCurrentStreak(dayStamps, LocalDate.now())
+                streak = computeCurrentStreak(dayStamps, LocalDate.now()),
+                focusSecondsToday = focusSeconds,
+                weekCounts = bucketLastSevenDays(weekRows)
             )
         }
+    }
+
+    /** Session counts into 7 slots, oldest → today. Same day-bucketing the report chart uses. */
+    private fun bucketLastSevenDays(rows: List<DayCount>): List<Int> {
+        val today = LocalDate.now()
+        val buckets = IntArray(7)
+        rows.forEach { row ->
+            val date = runCatching { LocalDate.parse(row.day) }.getOrNull() ?: return@forEach
+            val daysAgo = ChronoUnit.DAYS.between(date, today).toInt()
+            if (daysAgo in 0..6) buckets[6 - daysAgo] = row.count
+        }
+        return buckets.toList()
     }
 }
