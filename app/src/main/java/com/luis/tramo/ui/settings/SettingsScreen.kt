@@ -2,6 +2,7 @@ package com.luis.tramo.ui.settings
 
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -77,6 +79,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.luis.tramo.R
 import com.luis.tramo.ui.theme.Spacing
 import com.luis.tramo.ui.theme.TabularFigures
+import com.luis.tramo.widget.PinResult
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -361,6 +364,34 @@ private fun PreferencesCard(
                     else R.string.settings_notifications_disabled
                 )
             )
+        }
+
+        // Pinning is the only comfortable way to reach the widget on ROMs that bury the widget
+        // picker (MIUI/HyperOS). Launchers without pin support get the manual hint instead of a
+        // button that would do nothing.
+        val pinSupported = remember { viewModel.isWidgetPinSupported() }
+        PreferenceRow(
+            icon = Icons.Filled.Widgets,
+            title = stringResource(R.string.settings_widget_title),
+            subtitle = stringResource(
+                if (pinSupported) R.string.settings_widget_subtitle
+                else R.string.settings_widget_unsupported
+            ),
+            onClick = if (!pinSupported) null else {
+                {
+                    // Already-placed instances are checked first, so a second tap warns instead of
+                    // adding a duplicate.
+                    if (viewModel.pinWidget() == PinResult.ALREADY_PINNED) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.settings_widget_already_pinned),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        ) {
+            if (pinSupported) ValueChevron(value = stringResource(R.string.settings_widget_action))
         }
 
         PreferenceRow(

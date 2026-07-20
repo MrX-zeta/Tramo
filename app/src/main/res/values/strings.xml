@@ -60,6 +60,11 @@
     <string name="settings_notifications_subtitle">Manage notifications</string>
     <string name="settings_notifications_enabled">Enabled</string>
     <string name="settings_notifications_disabled">Disabled</string>
+    <string name="settings_widget_title">Home screen widget</string>
+    <string name="settings_widget_subtitle">Pin the focus ring to your home screen</string>
+    <string name="settings_widget_action">Add</string>
+    <string name="settings_widget_unsupported">Long-press the home screen and pick Widgets</string>
+    <string name="settings_widget_already_pinned">The widget is already on the home screen</string>
     <string name="settings_language_subtitle">Choose your language</string>
     <string name="settings_dark_subtitle">Switch between light and dark theme</string>
     <string name="settings_keep_screen_title">Keep screen on</string>

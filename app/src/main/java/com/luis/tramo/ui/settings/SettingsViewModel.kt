@@ -40,6 +40,7 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val preferences: UserPreferencesRepository,
     private val widgetUpdater: com.luis.tramo.widget.WidgetUpdater,
+    private val widgetPinner: com.luis.tramo.widget.WidgetPinner,
     taskRepository: TaskRepository,
     sessionRepository: SessionRepository
 ) : ViewModel() {
@@ -132,6 +133,12 @@ class SettingsViewModel @Inject constructor(
     fun setSessionsBeforeLongBreak(count: Int) = viewModelScope.launch {
         preferences.setSessionsBeforeLongBreak(count.coerceIn(MIN_SESSIONS_BEFORE_LONG, MAX_SESSIONS_BEFORE_LONG))
     }
+
+    /** Queried on composition: a launcher without pin support gets a manual hint, not a button. */
+    fun isWidgetPinSupported(): Boolean = widgetPinner.isPinSupported()
+
+    /** Launches the system pin dialog, or reports that the widget is already placed. */
+    fun pinWidget(): com.luis.tramo.widget.PinResult = widgetPinner.requestPin()
 
     fun setLanguage(tag: String) {
         val locales = if (tag.isEmpty()) {

@@ -55,6 +55,11 @@
     <string name="settings_notifications_subtitle">Gestiona las notificaciones</string>
     <string name="settings_notifications_enabled">Activadas</string>
     <string name="settings_notifications_disabled">Desactivadas</string>
+    <string name="settings_widget_title">Widget en pantalla de inicio</string>
+    <string name="settings_widget_subtitle">Ancla el anillo de concentración a tu pantalla de inicio</string>
+    <string name="settings_widget_action">Añadir</string>
+    <string name="settings_widget_unsupported">Mantén pulsada la pantalla de inicio y elige Widgets</string>
+    <string name="settings_widget_already_pinned">El widget ya está en la pantalla de inicio</string>
     <string name="settings_language_subtitle">Elige tu idioma</string>
     <string name="settings_dark_subtitle">Cambia entre tema claro y oscuro</string>
     <string name="settings_keep_screen_title">Mantener pantalla encendida</string>
