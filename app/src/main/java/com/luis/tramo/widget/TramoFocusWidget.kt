@@ -105,7 +105,9 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
         isWide -> (h - 28f).coerceIn(40f, 72f)
         h < 96f -> minSide - 8f
         h < 150f -> 72f
-        else -> 88f
+        // Largest size: the labelled week strip needs vertical room, so scale the ring down a touch
+        // (it stays the hero) and let the pills grow — everything still fits the bounded height.
+        else -> (h * 0.34f).coerceIn(52f, 64f)
     }.coerceIn(34f, 120f)
 
     // Stacked layout reveals rows as height allows; the wide layout always shows everything.
@@ -140,10 +142,13 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
                 .background(ImageProvider(R.drawable.widget_background))
                 .padding(12.dp)
                 .clickable(actionStartActivity(homeIntent(context))),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            // Center the ring + stats + bars as one group so a wide widget shows balanced side
+            // margins instead of a lopsided gap in the middle.
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             RingWithFigure(ring, ringDpValue, data, figureSize)
-            Spacer(GlanceModifier.width(12.dp))
+            Spacer(GlanceModifier.width(14.dp))
             // Left group: the streak with today's focus time beneath it.
             Column(verticalAlignment = Alignment.CenterVertically) {
                 StreakRow(data.streak, streakIconDp)
@@ -154,14 +159,16 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
                 )
             }
             if (hasWeek) {
-                // Push the week bars to the right edge so they read as their own column.
-                Spacer(GlanceModifier.defaultWeight())
+                Spacer(GlanceModifier.width(14.dp))
+                val barW = (h * 0.09f).coerceIn(5f, 9f)
                 WeekStrip(
                     counts = data.weekCounts,
+                    // The wide strip is short: no vertical room for initials, keep it to pills.
+                    labels = null,
                     night = night,
-                    maxBarHeightDp = (h - 26f).coerceIn(24f, 56f),
-                    barWidthDp = 6f,
-                    gapDp = 4f
+                    barHeightDp = (h * 0.42f).coerceIn(18f, 38f),
+                    barWidthDp = barW,
+                    gapDp = 5f
                 )
             }
         }
@@ -194,12 +201,16 @@ private fun FocusRingWidget(data: WidgetSnapshot) {
             if (showWeek && hasWeek) {
                 // The week strip replaces the old "Tramo" wordmark: information, not decoration.
                 Spacer(GlanceModifier.height(10.dp))
+                // Pills grow with the widget (height drives their length, width drives their girth);
+                // the day initials come in once there's vertical room.
+                val barW = (w * 0.05f).coerceIn(6f, 11f)
                 WeekStrip(
                     counts = data.weekCounts,
+                    labels = if (h >= 150f) data.weekLabels.takeIf { it.size == 7 } else null,
                     night = night,
-                    maxBarHeightDp = 24f,
-                    barWidthDp = 8f,
-                    gapDp = 5f
+                    barHeightDp = (h * 0.17f).coerceIn(22f, 34f),
+                    barWidthDp = barW,
+                    gapDp = barW * 0.9f
                 )
             }
         }
@@ -238,47 +249,52 @@ private fun RingWithFigure(ring: Bitmap, ringDpValue: Float, data: WidgetSnapsho
 }
 
 /**
- * The last 7 focus days as a tidy row of rounded bars, oldest → today. Bar height tracks that day's
- * session count (all normalised to the busiest day), so it reads as a small activity chart. Built
- * from native Box shapes (not a bitmap) so MIUI/HyperOS — which caches widget ImageViews — repaints
- * it reliably. Coloured in pine-teal; amber stays reserved for the streak/progress per the palette.
+ * The current week Monday → Sunday as a row of equal pills. Each lights up in pine-teal when that
+ * day had at least one focus session and stays dim otherwise — a consistency ("did I show up?")
+ * read that echoes the streak, not a magnitude chart. Native Box shapes (not a bitmap) so
+ * MIUI/HyperOS — which caches widget ImageViews — repaints it reliably. Amber stays for streak.
  */
 @androidx.compose.runtime.Composable
 private fun WeekStrip(
     counts: List<Int>,
+    labels: List<String>?,
     night: Boolean,
-    maxBarHeightDp: Float,
+    barHeightDp: Float,
     barWidthDp: Float,
     gapDp: Float
 ) {
-    val norm = (counts.maxOrNull() ?: 0).coerceAtLeast(1)
-    Row(verticalAlignment = Alignment.Bottom) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         counts.forEachIndexed { index, count ->
             if (index > 0) Spacer(GlanceModifier.width(gapDp.dp))
-            val frac = count.toFloat() / norm
-            // Empty days keep a short stub so the baseline stays visible.
-            val barHeight = (frac * maxBarHeightDp).coerceIn(4f, maxBarHeightDp)
-            Box(
-                modifier = GlanceModifier
-                    .width(barWidthDp.dp)
-                    .height(barHeight.dp)
-                    .cornerRadius(3.dp)
-                    .background(androidx.glance.unit.ColorProvider(weekBarColor(count, night)))
-            ) {}
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = GlanceModifier
+                        .width(barWidthDp.dp)
+                        .height(barHeightDp.dp)
+                        .cornerRadius((barWidthDp / 2f).dp)
+                        .background(androidx.glance.unit.ColorProvider(weekBarColor(count, night)))
+                ) {}
+                if (labels != null) {
+                    Spacer(GlanceModifier.height(3.dp))
+                    Text(
+                        text = labels.getOrElse(index) { "" },
+                        style = TextStyle(
+                            color = Muted,
+                            fontSize = (barWidthDp * 1.3f).coerceIn(9f, 12f).sp
+                        )
+                    )
+                }
+            }
         }
     }
 }
 
-/** Track when idle; two pine shades for light/heavy days — a calm echo of the report heatmap. */
+/** Lit (pine) when the day had at least one focus session; the dim track when it was idle. */
 private fun weekBarColor(count: Int, night: Boolean): Color {
     val pine = if (night) Color(0xFF8FCBD1) else Color(0xFF2F5D62)
-    // Track raised off the background so idle days stay legible; light-day pine kept fairly strong.
+    // Track raised off the background so idle days stay legible.
     val track = if (night) Color(0xFF5C6A66) else Color(0xFFB7C5C2)
-    return when {
-        count <= 0 -> track
-        count <= 2 -> pine.copy(alpha = 0.65f)
-        else -> pine
-    }
+    return if (count > 0) pine else track
 }
 
 /**

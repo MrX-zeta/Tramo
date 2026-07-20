@@ -147,7 +147,11 @@ class SettingsViewModel @Inject constructor(
             LocaleListCompat.forLanguageTags(tag)
         }
         AppCompatDelegate.setApplicationLocales(locales)
-        viewModelScope.launch { preferences.setLanguageTag(tag) }
+        viewModelScope.launch {
+            preferences.setLanguageTag(tag)
+            // Repaint the widget so its day initials follow the new language.
+            widgetUpdater.refresh()
+        }
     }
 
     companion object {
